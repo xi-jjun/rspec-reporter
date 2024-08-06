@@ -31084,12 +31084,14 @@ const github = __nccwpck_require__(3814);
 const FILE_PATH = 'filepath';
 
 try {
+  const {GITHUB_TOKEN} = process.env;
+  const octokit = github.getOctokit(GITHUB_TOKEN);
+
   const rspecResultFilepath = core.getInput(FILE_PATH);
   console.log("rspec result filepath", rspecResultFilepath);
 
   const fs = __nccwpck_require__(7147);
   const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
-  console.log("results", results);
 
   let comment = `## RSpec Test Results\n\n`;
   comment += `<table>
@@ -31100,14 +31102,14 @@ try {
                 </tr>
             `;
 
-  results.examples.forEach(test_case_result => {
-    if (test_case_result.status === 'failed') {
+  results.examples.forEach(testCaseResult => {
+    if (testCaseResult.status === 'failed') {
       comment += `<tr>\n`;
-      comment += `  <td> ${test_case_result.file_path} </td>\n`;
-      comment += `  <td> ${test_case_result.full_description} </td>\n`;
+      comment += `  <td> ${testCaseResult.file_path} </td>\n`;
+      comment += `  <td> ${testCaseResult.full_description} </td>\n`;
       comment += `  <td>\n\n`
       comment += `\`\`\`console\n`;
-      comment += ` \n${test_case_result.exception.message}\n \n`;
+      comment += ` \n${testCaseResult.exception.message}\n \n`;
       comment += `\`\`\`\n\n`;
       comment += `  </td>\n`
       comment += `</tr>`;
@@ -31115,7 +31117,7 @@ try {
   });
   comment += `</table>`;
 
-  github.rest.issues.createComment({
+  octokit.rest.issues.createComment({
     issue_number: github.context.issue.number,
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
