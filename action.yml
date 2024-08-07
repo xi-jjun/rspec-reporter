@@ -1,12 +1,12 @@
 name: 'Rspec reporter'
 description: 'Report Rspec result on Pull Request comment'
+branding:
+  icon: check-square
+  color: purple
 inputs:
   filepath:
     description: 'Output file path of rspec'
     required: true
-#outputs:
-#  time: # id of output
-#    description: 'The time we greeted you'
 runs:
   using: 'node20'
   main: 'dist/index.js'
