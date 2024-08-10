@@ -8,6 +8,7 @@ try {
   const FILE_PATH = 'filepath';
   const rspecResultFilepath = core.getInput(FILE_PATH);
   const onlyChangedRspecFile = core.getInput('only-pull-request-files');
+  console.log(onlyChangedRspecFile);
 
   const fs = require('fs');
   const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
@@ -26,6 +27,7 @@ try {
           return `${removeExtFilename}_spec.rb`;
         }
       });
+    console.log(pullRequestRubyFilenames);
   }
 
   let comment = `## RSpec Test Results\n\n`;
