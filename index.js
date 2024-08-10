@@ -7,7 +7,7 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 try {
   const FILE_PATH = 'filepath';
   const rspecResultFilepath = core.getInput(FILE_PATH);
-  const onlyChangedRspecFile = core.getInput('only-changed-rspec-file');
+  const onlyChangedRspecFile = core.getInput('only-pull-request-files');
 
   const fs = require('fs');
   const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));

@@ -7,6 +7,10 @@ inputs:
   filepath:
     description: 'Output file path of rspec'
     required: true
+  only-pull-request-files:
+    description: 'Report rspec result only included in this pull request'
+    required: false
+    default: 'false'
 runs:
   using: 'node20'
   main: 'dist/index.js'
