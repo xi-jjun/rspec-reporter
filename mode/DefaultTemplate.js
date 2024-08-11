@@ -1,4 +1,4 @@
-class DefaultTemplate {
+export class DefaultTemplate {
   constructor() {
     this.name = "DefaultTemplate";
     this.formatter = (template, ...args) => {
@@ -30,7 +30,7 @@ class DefaultTemplate {
         
           \`\`\`console
           
-          @{3}
+          @{2}
           
           \`\`\`
         

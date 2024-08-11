@@ -1,8 +1,8 @@
-class DefaultReporter {
+export class DefaultReporter {
   /**
-   * @param octokit {GitHub} for using GitHub API.
+   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
-   * @param githubContext {Context.Context} github context object. It contains issue number, repo info etc...
+   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
    */
   constructor(octokit, template, githubContext) {
     this.name = "DefaultReporter";
@@ -24,13 +24,17 @@ class DefaultReporter {
 
   /**
    * iterate rspec each cases and extract `filepath`, `full desc`, `detail message`.<br>
-   * It return extracted rspec results by case.
+   * It return extracted rspec failed results by case.
    *
    * @param rspecResult {JSON} rspec result (JSON format)
-   * @returns [RspecCasesResult]
+   * @returns [RspecCaseResult]
    */
   extractRspecResult(rspecResult) {
-    return rspecResult.examples.map(rspecCaseResult => {
+    console.log("extractRspecResult START!");
+    return rspecResult.examples
+      .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
+      .map(rspecCaseResult => {
+      console.log(rspecCaseResult);
       return {
         filepath: rspecCaseResult.file_path,
         fullDescription: rspecCaseResult.full_description,
@@ -43,10 +47,11 @@ class DefaultReporter {
    * draw report result for comment to pull request.<br>
    * return comment content string.
    *
-   * @param rspecCasesResult {Array<RspecCasesResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
+   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
    * @returns String
    */
   drawPullRequestComment(rspecCasesResult) {
+    console.log("drawPullRequestComment START!!");
     const header = this.template.formatter(this.template.header());
     const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
       const filepath = rspecCaseResult.filepath;
