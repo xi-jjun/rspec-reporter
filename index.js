@@ -1,6 +1,8 @@
+import {DefaultTemplate} from "./mode/DefaultTemplate";
+import {DefaultReporter} from "./mode/DefaultReporter";
+
 const core = require('@actions/core');
 const github = require('@actions/github');
-const fs = require("fs");
 
 const {GITHUB_TOKEN} = process.env;
 const octokit = github.getOctokit(GITHUB_TOKEN);
@@ -9,14 +11,12 @@ try {
   const FILE_PATH = 'filepath';
   const rspecResultFilepath = core.getInput(FILE_PATH);
   const onlyChangedRspecFile = core.getInput('only-pull-request-files');
-  console.log(onlyChangedRspecFile);
 
   if (onlyChangedRspecFile === 'true') {
     fetchPullRequestFiles(github.context)
       .then(response => {
         const pullRequestFiles = response.data;
         const pullRequestFilenames = pullRequestFiles.map(pullRequestFileInfo => extractFilename(pullRequestFileInfo.filename));
-        console.log(pullRequestFilenames);
         return filterPullRequestFilenames(pullRequestFilenames);
       })
       .then(filteredPullRequestFilename => createRspecReportComment(rspecResultFilepath, filteredPullRequestFilename))
@@ -33,13 +33,12 @@ try {
         throw new Error(`fetchPullRequestFiles failed : ${error.message}`);
       });
   } else {
-    const comment = createRspecReportComment(rspecResultFilepath, []);
-    octokit.rest.issues.createComment({
-      issue_number: github.context.issue.number,
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      body: comment
-    });
+    const fs = require('fs');
+    const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
+
+    const defaultTemplate = new DefaultTemplate();
+    const defaultReporter = new DefaultReporter(octokit, defaultTemplate, github.context);
+    defaultReporter.reportRspecResult(results);
   }
 } catch (error) {
   core.setFailed(error.message);
