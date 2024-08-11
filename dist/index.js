@@ -31121,15 +31121,14 @@ const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
 
 
 
+
 class Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class.
-   * @param gitHubApi {GitHubApi} GitHub API module class.
+   * @param gitHubApi {GitHubApi} GitHub API module class for using GitHub api.
    */
-  constructor(octokit, template, gitHubApi) {
+  constructor(template, gitHubApi) {
     this.name = "Reporter";
-    this.octokit = octokit;
     this.template = template;
     this.gitHubApi = gitHubApi;
   }
@@ -31182,12 +31181,11 @@ class Reporter {
 
 class DefaultReporter extends Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
    * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, gitHubApi) {
-    super(octokit, template, gitHubApi);
+  constructor(template, gitHubApi) {
+    super(template, gitHubApi);
     this.name = "DefaultReporter";
   }
 
@@ -31330,12 +31328,11 @@ class DefaultTemplateFactory {
 
 class OnlyPRFilesReporter extends Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class. `OnlyPRFilesReporter` use `OnlyPRFilesTemplate`.
    * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, gitHubApi) {
-    super(octokit, template, gitHubApi);
+  constructor(template, gitHubApi) {
+    super(template, gitHubApi);
     this.name = "OnlyPRFilesReporter";
   }
 
@@ -31563,7 +31560,7 @@ class ReporterFactory {
 
     const gitHubApi = new GitHubApi(octokit, githubContext);
 
-    return reporterFactory.createReporter(octokit, template, gitHubApi);
+    return reporterFactory.createReporter(template, gitHubApi);
   }
 }
 
@@ -31579,7 +31576,9 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 try {
   const rspecResultFilepath = core.getInput('filepath');
   const reportMode = core.getInput('report-mode');
-  console.log(`report mode is [${reportMode}]`);
+  console.log('== inputs ==');
+  console.log(`mode : ${reportMode}`);
+  console.log(`filepath : ${rspecResultFilepath}`);
 
   const fs = __nccwpck_require__(7147);
   const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
