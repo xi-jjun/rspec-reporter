@@ -7,6 +7,10 @@ inputs:
   filepath:
     description: 'Output file path of rspec'
     required: true
+  report-mode:
+    description: 'Rspec report mode. Supported mode is `default`, `onlyPRFiles`'
+    required: false
+    default: 'default'
 runs:
   using: 'node20'
   main: 'dist/index.js'
