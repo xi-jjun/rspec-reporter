@@ -31070,17 +31070,197 @@ module.exports = parseParams
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__nccwpck_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
 (() => {
+"use strict";
+// ESM COMPAT FLAG
+__nccwpck_require__.r(__webpack_exports__);
+
+;// CONCATENATED MODULE: ./mode/DefaultTemplate.js
+class DefaultTemplate {
+  constructor() {
+    this.name = "DefaultTemplate";
+    this.formatter = (template, ...args) => {
+      return template.replace(/@{([0-9]+)}/g, function (match, index) {
+        return typeof args[index] === 'undefined' ? match : args[index];
+      });
+    };
+  }
+
+  header() {
+    return `
+    ## Rspec Test Results
+    
+    <table>
+      <tr>
+        <td> rspec filepath </td>
+        <td> full description </td>
+        <td> detail error message </td>
+      </tr>
+    `;
+  }
+
+  body() {
+    return `
+      <tr>
+        <td> @{0} </td>
+        <td> @{1} </td>
+        <td>
+        
+          \`\`\`console
+          
+          @{3}
+          
+          \`\`\`
+        
+        </td>
+      </tr>
+    `;
+  }
+
+  footer() {
+    return `
+    </table>
+    `;
+  }
+
+  templateString() {
+    return `
+    ## Rspec Test Results
+    
+    <table>
+      <tr>
+        <td> rspec filepath </td>
+        <td> full description </td>
+        <td> detail error message </td>
+      </tr>
+      <tr>
+        <td> @{0} </td>
+        <td> @{1} </td>
+        <td>
+        
+          \`\`\`console
+          
+          @{3}
+          
+          \`\`\`
+        
+        </td>
+      </tr>
+    </table>
+    `;
+  }
+}
+
+;// CONCATENATED MODULE: ./mode/DefaultReporter.js
+class DefaultReporter {
+  /**
+   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
+   * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
+   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   */
+  constructor(octokit, template, githubContext) {
+    this.name = "DefaultReporter";
+    this.octokit = octokit;
+    this.template = template;
+    this.githubContext = githubContext;
+  }
+
+  /**
+   * Parse rspec result file and create pull request comment.
+   *
+   * @param rspecResult {JSON} rspec result (JSON format)
+   */
+  reportRspecResult(rspecResult) {
+    const rspecCasesResult = this.extractRspecResult(rspecResult);
+    const content = this.drawPullRequestComment(rspecCasesResult);
+    this.createCommentToPullRequest(content);
+  }
+
+  /**
+   * iterate rspec each cases and extract `filepath`, `full desc`, `detail message`.<br>
+   * It return extracted rspec failed results by case.
+   *
+   * @param rspecResult {JSON} rspec result (JSON format)
+   * @returns [RspecCaseResult]
+   */
+  extractRspecResult(rspecResult) {
+    console.log("extractRspecResult START!");
+    return rspecResult.examples
+      .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
+      .map(rspecCaseResult => {
+      console.log(rspecCaseResult);
+      return {
+        filepath: rspecCaseResult.file_path,
+        fullDescription: rspecCaseResult.full_description,
+        exceptionMessage: rspecCaseResult.exception.message
+      }
+    });
+  }
+
+  /**
+   * draw report result for comment to pull request.<br>
+   * return comment content string.
+   *
+   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
+   * @returns String
+   */
+  drawPullRequestComment(rspecCasesResult) {
+    console.log("drawPullRequestComment START!!");
+    const header = this.template.formatter(this.template.header());
+    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
+      const filepath = rspecCaseResult.filepath;
+      const fullDescription = rspecCaseResult.fullDescription;
+      const exceptionMessage = rspecCaseResult.exceptionMessage;
+      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
+    });
+    const footer = this.template.formatter(this.template.footer());
+
+    return `
+      ${header}
+      ${rspecResultBody}
+      ${footer}
+    `;
+  }
+
+  /**
+   * create pull request comment.
+   *
+   * @param content {String} rspec report content
+   */
+  createCommentToPullRequest(content) {
+    this.octokit.rest.issues.createComment({
+      issue_number: this.githubContext.issue.number,
+      owner: this.githubContext.repo.owner,
+      repo: this.githubContext.repo.repo,
+      body: content
+    });
+  }
+}
+
+;// CONCATENATED MODULE: ./index.js
+
+
+
 const core = __nccwpck_require__(4091);
 const github = __nccwpck_require__(3814);
-const fs = __nccwpck_require__(7147);
 
 const {GITHUB_TOKEN} = process.env;
 const octokit = github.getOctokit(GITHUB_TOKEN);
@@ -31089,14 +31269,12 @@ try {
   const FILE_PATH = 'filepath';
   const rspecResultFilepath = core.getInput(FILE_PATH);
   const onlyChangedRspecFile = core.getInput('only-pull-request-files');
-  console.log(onlyChangedRspecFile);
 
   if (onlyChangedRspecFile === 'true') {
     fetchPullRequestFiles(github.context)
       .then(response => {
         const pullRequestFiles = response.data;
         const pullRequestFilenames = pullRequestFiles.map(pullRequestFileInfo => extractFilename(pullRequestFileInfo.filename));
-        console.log(pullRequestFilenames);
         return filterPullRequestFilenames(pullRequestFilenames);
       })
       .then(filteredPullRequestFilename => createRspecReportComment(rspecResultFilepath, filteredPullRequestFilename))
@@ -31113,13 +31291,12 @@ try {
         throw new Error(`fetchPullRequestFiles failed : ${error.message}`);
       });
   } else {
-    const comment = createRspecReportComment(rspecResultFilepath, []);
-    octokit.rest.issues.createComment({
-      issue_number: github.context.issue.number,
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      body: comment
-    });
+    const fs = __nccwpck_require__(7147);
+    const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
+
+    const defaultTemplate = new DefaultTemplate();
+    const defaultReporter = new DefaultReporter(octokit, defaultTemplate, github.context);
+    defaultReporter.reportRspecResult(results);
   }
 } catch (error) {
   core.setFailed(error.message);
