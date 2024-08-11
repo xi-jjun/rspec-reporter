@@ -1,7 +1,4 @@
-import {DefaultTemplate} from "./mode/default/DefaultTemplate";
-import {DefaultReporter} from "./mode/default/DefaultReporter";
-import {OnlyPRFilesReporter} from "./mode/onlyPullRequestFiles/OnlyPRFilesReporter";
-import {OnlyPRFilesTemplate} from "./mode/onlyPullRequestFiles/OnlyPRFilesTemplate";
+import {ReporterFactory} from "./mode/ReporterFactory";
 
 const core = require('@actions/core');
 const github = require('@actions/github');
@@ -11,20 +8,14 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 
 try {
   const rspecResultFilepath = core.getInput('filepath');
-  const onlyChangedRspecFile = core.getInput('only-pull-request-files');
+  const reportMode = core.getInput('report-mode');
+  console.log(`report mode is [${reportMode}]`);
 
   const fs = require('fs');
   const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
 
-  if (onlyChangedRspecFile === 'true') {
-    const onlyPRFilesTemplate = new OnlyPRFilesTemplate();
-    const onlyPRFilesReporter = new OnlyPRFilesReporter(octokit, onlyPRFilesTemplate, github.context);
-    onlyPRFilesReporter.reportRspecResult(rspecResult);
-  } else {
-    const defaultTemplate = new DefaultTemplate();
-    const defaultReporter = new DefaultReporter(octokit, defaultTemplate, github.context);
-    defaultReporter.reportRspecResult(rspecResult);
-  }
+  const reporter = ReporterFactory.createReporter(reportMode, octokit, github.context);
+  reporter.reportRspecResult(rspecResult);
 } catch (error) {
   core.setFailed(error.message);
 }
