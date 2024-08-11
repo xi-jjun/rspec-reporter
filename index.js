@@ -1,5 +1,5 @@
-import {DefaultTemplate} from "./mode/DefaultTemplate";
-import {DefaultReporter} from "./mode/DefaultReporter";
+import {DefaultTemplate} from "./mode/default/DefaultTemplate";
+import {DefaultReporter} from "./mode/default/DefaultReporter";
 import {OnlyPRFilesReporter} from "./mode/onlyPullRequestFiles/OnlyPRFilesReporter";
 import {OnlyPRFilesTemplate} from "./mode/onlyPullRequestFiles/OnlyPRFilesTemplate";
 
