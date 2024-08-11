@@ -31126,7 +31126,7 @@ class DefaultTemplate {
         
           \`\`\`console
           
-          @{3}
+          @{2}
           
           \`\`\`
         
@@ -31169,7 +31169,25 @@ class DefaultTemplate {
   }
 }
 
+;// CONCATENATED MODULE: ./utils/StringUtils.js
+/**
+ * trim each lines and join.<br>
+ * Each line's prefix must be trimmed; otherwise, it will not be displayed correctly in the pull request comments.
+ *
+ * @param str {string} target string.
+ * @param splitChar {string} split character. default value is `\n`.
+ * @param joinChar {string} join character. default value is `\n`.
+ * @returns {string}
+ */
+const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
+  return str.split(splitChar)
+    .map(line => line.trim())
+    .join(joinChar);
+};
+
 ;// CONCATENATED MODULE: ./mode/DefaultReporter.js
+
+
 class DefaultReporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
@@ -31230,13 +31248,13 @@ class DefaultReporter {
       const fullDescription = rspecCaseResult.fullDescription;
       const exceptionMessage = rspecCaseResult.exceptionMessage;
       return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    });
+    }).join("\n");
     const footer = this.template.formatter(this.template.footer());
 
     return `
-      ${header}
-      ${rspecResultBody}
-      ${footer}
+    ${trimEachLines(header)}
+    ${trimEachLines(rspecResultBody)}
+    ${trimEachLines(footer)}
     `;
   }
 
