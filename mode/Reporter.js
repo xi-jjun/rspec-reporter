@@ -38,7 +38,6 @@ export class Reporter {
    * @returns {string} return report result content. This content is going to be added pull request comment
    */
   drawPullRequestComment(rspecCasesResult) {
-    console.log("drawPullRequestComment START!!");
     const header = this.template.formatter(this.template.header());
     const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
       const filepath = rspecCaseResult.filepath;

@@ -93,7 +93,6 @@ export class OnlyPRFilesReporter extends Reporter {
    * @returns [RspecCaseResult] rspec cases result in pull requested files
    */
   #extractRspecResult(rspecResult, pullRequestRspecFilenames) {
-    console.log("#extractRspecResult START!");
     return rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
       .filter(failedRspecCaseResult => this.#isPullRequestFiles(failedRspecCaseResult, pullRequestRspecFilenames))

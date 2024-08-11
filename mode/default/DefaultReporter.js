@@ -29,16 +29,14 @@ export class DefaultReporter extends Reporter {
    * @returns [RspecCaseResult]
    */
   extractRspecResult(rspecResult) {
-    console.log("extractRspecResult START!");
     return rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
       .map(rspecCaseResult => {
-      console.log(rspecCaseResult);
-      return {
-        filepath: rspecCaseResult.file_path,
-        fullDescription: rspecCaseResult.full_description,
-        exceptionMessage: rspecCaseResult.exception.message
-      }
-    });
+        return {
+          filepath: rspecCaseResult.file_path,
+          fullDescription: rspecCaseResult.full_description,
+          exceptionMessage: rspecCaseResult.exception.message
+        }
+      });
   }
 }
