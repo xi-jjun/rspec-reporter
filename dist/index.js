@@ -31093,6 +31093,14 @@ var __webpack_exports__ = {};
 // ESM COMPAT FLAG
 __nccwpck_require__.r(__webpack_exports__);
 
+;// CONCATENATED MODULE: ./exceptions/NotImplementedException.js
+class NotImplementedException extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "NotImplementedException";
+  }
+}
+
 ;// CONCATENATED MODULE: ./utils/StringUtils.js
 /**
  * trim each lines and join.<br>
@@ -31109,20 +31117,78 @@ const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
     .join(joinChar);
 };
 
+;// CONCATENATED MODULE: ./mode/Reporter.js
+
+
+
+class Reporter {
+  /**
+   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
+   * @param template {Template} Template class.
+   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   */
+  constructor(octokit, template, githubContext) {
+    this.name = "Reporter";
+    this.octokit = octokit;
+    this.template = template;
+    this.githubContext = githubContext;
+  }
+
+  /**
+   * Parse rspec result file and create pull request comment.
+   *
+   * @param rspecResult {JSON} rspec result (JSON format). It is result of executing rspec.
+   */
+  reportRspecResult(rspecResult) {
+    try {
+      this.notImplementedError();
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  notImplementedError() {
+    throw new NotImplementedException('You should implement this in child class');
+  }
+
+  /**
+   * Draw report result for comment to pull request.<br>
+   * Return comment content string. This method is common logic.
+   *
+   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
+   * @returns {string} return report result content. This content is going to be added pull request comment
+   */
+  drawPullRequestComment(rspecCasesResult) {
+    console.log("drawPullRequestComment START!!");
+    const header = this.template.formatter(this.template.header());
+    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
+      const filepath = rspecCaseResult.filepath;
+      const fullDescription = rspecCaseResult.fullDescription;
+      const exceptionMessage = rspecCaseResult.exceptionMessage;
+      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
+    }).join("\n");
+    const footer = this.template.formatter(this.template.footer());
+
+    return `
+    ${trimEachLines(header)}
+    ${trimEachLines(rspecResultBody)}
+    ${trimEachLines(footer)}
+    `;
+  }
+}
+
 ;// CONCATENATED MODULE: ./mode/default/DefaultReporter.js
 
 
-class DefaultReporter {
+class DefaultReporter extends Reporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
    * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
    */
   constructor(octokit, template, githubContext) {
+    super(octokit, template, githubContext);
     this.name = "DefaultReporter";
-    this.octokit = octokit;
-    this.template = template;
-    this.githubContext = githubContext;
   }
 
   /**
@@ -31158,31 +31224,6 @@ class DefaultReporter {
   }
 
   /**
-   * draw report result for comment to pull request.<br>
-   * return comment content string.
-   *
-   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
-   * @returns String
-   */
-  drawPullRequestComment(rspecCasesResult) {
-    console.log("drawPullRequestComment START!!");
-    const header = this.template.formatter(this.template.header());
-    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
-      const filepath = rspecCaseResult.filepath;
-      const fullDescription = rspecCaseResult.fullDescription;
-      const exceptionMessage = rspecCaseResult.exceptionMessage;
-      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    }).join("\n");
-    const footer = this.template.formatter(this.template.footer());
-
-    return `
-    ${trimEachLines(header)}
-    ${trimEachLines(rspecResultBody)}
-    ${trimEachLines(footer)}
-    `;
-  }
-
-  /**
    * create pull request comment.
    *
    * @param content {String} rspec report content
@@ -31197,10 +31238,9 @@ class DefaultReporter {
   }
 }
 
-;// CONCATENATED MODULE: ./mode/default/DefaultTemplate.js
-class DefaultTemplate {
+;// CONCATENATED MODULE: ./mode/Template.js
+class Template {
   constructor() {
-    this.name = "DefaultTemplate";
     this.formatter = (template, ...args) => {
       return template.replace(/@{([0-9]+)}/g, function (match, index) {
         return typeof args[index] === 'undefined' ? match : args[index];
@@ -31245,7 +31285,7 @@ class DefaultTemplate {
     `;
   }
 
-  templateString() {
+  fullTemplate() {
     return `
     ## Rspec Test Results
     
@@ -31262,7 +31302,7 @@ class DefaultTemplate {
         
           \`\`\`console
           
-          @{3}
+          @{2}
           
           \`\`\`
         
@@ -31270,6 +31310,16 @@ class DefaultTemplate {
       </tr>
     </table>
     `;
+  }
+}
+
+;// CONCATENATED MODULE: ./mode/default/DefaultTemplate.js
+
+
+class DefaultTemplate extends Template {
+  constructor() {
+    super();
+    this.name = "DefaultTemplate";
   }
 }
 
@@ -31292,17 +31342,15 @@ class DefaultTemplateFactory {
 ;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesReporter.js
 
 
-class OnlyPRFilesReporter {
+class OnlyPRFilesReporter extends Reporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
-   * @param template {OnlyPRFilesTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
+   * @param template {Template} Template class. `OnlyPRFilesReporter` use `OnlyPRFilesTemplate`.
    * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
    */
   constructor(octokit, template, githubContext) {
+    super(octokit, template, githubContext);
     this.name = "OnlyPRFilesReporter";
-    this.octokit = octokit;
-    this.template = template;
-    this.githubContext = githubContext;
   }
 
   /**
@@ -31321,7 +31369,7 @@ class OnlyPRFilesReporter {
       .then(pullRequestRubyFilenames => this.#convertRubyFilenameToRspecFilenames(pullRequestRubyFilenames))
       .then(pullRequestRspecFilenames => {
         const rspecCasesResult = this.#extractRspecResult(rspecResult, pullRequestRspecFilenames);
-        const content = this.#drawPullRequestComment(rspecCasesResult);
+        const content = this.drawPullRequestComment(rspecCasesResult);
         this.#createCommentToPullRequest(content);
       })
       .catch(error => {
@@ -31422,31 +31470,6 @@ class OnlyPRFilesReporter {
   }
 
   /**
-   * draw report result for comment to pull request.<br>
-   * return comment content string.
-   *
-   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `#extractRspecResult` method.
-   * @returns {string} report content
-   */
-  #drawPullRequestComment(rspecCasesResult) {
-    console.log("#drawPullRequestComment START!!");
-    const header = this.template.formatter(this.template.header());
-    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
-      const filepath = rspecCaseResult.filepath;
-      const fullDescription = rspecCaseResult.fullDescription;
-      const exceptionMessage = rspecCaseResult.exceptionMessage;
-      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    }).join("\n");
-    const footer = this.template.formatter(this.template.footer());
-
-    return `
-    ${trimEachLines(header)}
-    ${trimEachLines(rspecResultBody)}
-    ${trimEachLines(footer)}
-    `;
-  }
-
-  /**
    * create pull request comment.
    *
    * @param content {String} rspec report content
@@ -31462,78 +31485,12 @@ class OnlyPRFilesReporter {
 }
 
 ;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesTemplate.js
-class OnlyPRFilesTemplate {
+
+
+class OnlyPRFilesTemplate extends Template {
   constructor() {
+    super();
     this.name = "OnlyPRFilesTemplate";
-    this.formatter = (template, ...args) => {
-      return template.replace(/@{([0-9]+)}/g, function (match, index) {
-        return typeof args[index] === 'undefined' ? match : args[index];
-      });
-    };
-  }
-
-  header() {
-    return `
-    ## Rspec Test Results
-    
-    <table>
-      <tr>
-        <td> rspec filepath </td>
-        <td> full description </td>
-        <td> detail error message </td>
-      </tr>
-    `;
-  }
-
-  body() {
-    return `
-      <tr>
-        <td> @{0} </td>
-        <td> @{1} </td>
-        <td>
-        
-          \`\`\`console
-          
-          @{2}
-          
-          \`\`\`
-        
-        </td>
-      </tr>
-    `;
-  }
-
-  footer() {
-    return `
-    </table>
-    `;
-  }
-
-  templateString() {
-    return `
-    ## Rspec Test Results
-    
-    <table>
-      <tr>
-        <td> rspec filepath </td>
-        <td> full description </td>
-        <td> detail error message </td>
-      </tr>
-      <tr>
-        <td> @{0} </td>
-        <td> @{1} </td>
-        <td>
-        
-          \`\`\`console
-          
-          @{2}
-          
-          \`\`\`
-        
-        </td>
-      </tr>
-    </table>
-    `;
   }
 }
 

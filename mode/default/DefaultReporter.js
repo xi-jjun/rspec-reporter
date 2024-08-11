@@ -1,16 +1,14 @@
-import {trimEachLines} from "../../utils/StringUtils";
+import {Reporter} from "../Reporter";
 
-export class DefaultReporter {
+export class DefaultReporter extends Reporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
    * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
    */
   constructor(octokit, template, githubContext) {
+    super(octokit, template, githubContext);
     this.name = "DefaultReporter";
-    this.octokit = octokit;
-    this.template = template;
-    this.githubContext = githubContext;
   }
 
   /**
@@ -43,31 +41,6 @@ export class DefaultReporter {
         exceptionMessage: rspecCaseResult.exception.message
       }
     });
-  }
-
-  /**
-   * draw report result for comment to pull request.<br>
-   * return comment content string.
-   *
-   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
-   * @returns String
-   */
-  drawPullRequestComment(rspecCasesResult) {
-    console.log("drawPullRequestComment START!!");
-    const header = this.template.formatter(this.template.header());
-    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
-      const filepath = rspecCaseResult.filepath;
-      const fullDescription = rspecCaseResult.fullDescription;
-      const exceptionMessage = rspecCaseResult.exceptionMessage;
-      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    }).join("\n");
-    const footer = this.template.formatter(this.template.footer());
-
-    return `
-    ${trimEachLines(header)}
-    ${trimEachLines(rspecResultBody)}
-    ${trimEachLines(footer)}
-    `;
   }
 
   /**
