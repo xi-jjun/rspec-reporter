@@ -1,16 +1,14 @@
-import {trimEachLines} from "../../utils/StringUtils";
+import {Reporter} from "../Reporter";
 
-export class OnlyPRFilesReporter {
+export class OnlyPRFilesReporter extends Reporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
-   * @param template {OnlyPRFilesTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
+   * @param template {Template} Template class. `OnlyPRFilesReporter` use `OnlyPRFilesTemplate`.
    * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
    */
   constructor(octokit, template, githubContext) {
+    super(octokit, template, githubContext);
     this.name = "OnlyPRFilesReporter";
-    this.octokit = octokit;
-    this.template = template;
-    this.githubContext = githubContext;
   }
 
   /**
@@ -29,7 +27,7 @@ export class OnlyPRFilesReporter {
       .then(pullRequestRubyFilenames => this.#convertRubyFilenameToRspecFilenames(pullRequestRubyFilenames))
       .then(pullRequestRspecFilenames => {
         const rspecCasesResult = this.#extractRspecResult(rspecResult, pullRequestRspecFilenames);
-        const content = this.#drawPullRequestComment(rspecCasesResult);
+        const content = this.drawPullRequestComment(rspecCasesResult);
         this.#createCommentToPullRequest(content);
       })
       .catch(error => {
@@ -127,31 +125,6 @@ export class OnlyPRFilesReporter {
   #isPullRequestFiles(rspecCaseResult, pullRequestedFilenames) {
     const filename = this.#extractFilenameFromPath(rspecCaseResult.file_path);
     return pullRequestedFilenames.includes(filename);
-  }
-
-  /**
-   * draw report result for comment to pull request.<br>
-   * return comment content string.
-   *
-   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `#extractRspecResult` method.
-   * @returns {string} report content
-   */
-  #drawPullRequestComment(rspecCasesResult) {
-    console.log("#drawPullRequestComment START!!");
-    const header = this.template.formatter(this.template.header());
-    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
-      const filepath = rspecCaseResult.filepath;
-      const fullDescription = rspecCaseResult.fullDescription;
-      const exceptionMessage = rspecCaseResult.exceptionMessage;
-      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    }).join("\n");
-    const footer = this.template.formatter(this.template.footer());
-
-    return `
-    ${trimEachLines(header)}
-    ${trimEachLines(rspecResultBody)}
-    ${trimEachLines(footer)}
-    `;
   }
 
   /**
