@@ -1,3 +1,5 @@
+import {trimEachLines} from "../utils/StringUtils";
+
 export class DefaultReporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
@@ -58,13 +60,13 @@ export class DefaultReporter {
       const fullDescription = rspecCaseResult.fullDescription;
       const exceptionMessage = rspecCaseResult.exceptionMessage;
       return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    });
+    }).join("\n");
     const footer = this.template.formatter(this.template.footer());
 
     return `
-      ${header}
-      ${rspecResultBody}
-      ${footer}
+    ${trimEachLines(header)}
+    ${trimEachLines(rspecResultBody)}
+    ${trimEachLines(footer)}
     `;
   }
 
