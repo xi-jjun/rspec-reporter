@@ -31121,17 +31121,16 @@ const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
 
 
 
+
 class Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @param gitHubApi {GitHubApi} GitHub API module class for using GitHub api.
    */
-  constructor(octokit, template, githubContext) {
+  constructor(template, gitHubApi) {
     this.name = "Reporter";
-    this.octokit = octokit;
     this.template = template;
-    this.githubContext = githubContext;
+    this.gitHubApi = gitHubApi;
   }
 
   /**
@@ -31159,7 +31158,6 @@ class Reporter {
    * @returns {string} return report result content. This content is going to be added pull request comment
    */
   drawPullRequestComment(rspecCasesResult) {
-    console.log("drawPullRequestComment START!!");
     const header = this.template.formatter(this.template.header());
     const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
       const filepath = rspecCaseResult.filepath;
@@ -31182,12 +31180,11 @@ class Reporter {
 
 class DefaultReporter extends Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, githubContext) {
-    super(octokit, template, githubContext);
+  constructor(template, gitHubApi) {
+    super(template, gitHubApi);
     this.name = "DefaultReporter";
   }
 
@@ -31199,7 +31196,7 @@ class DefaultReporter extends Reporter {
   reportRspecResult(rspecResult) {
     const rspecCasesResult = this.extractRspecResult(rspecResult);
     const content = this.drawPullRequestComment(rspecCasesResult);
-    this.createCommentToPullRequest(content);
+    this.gitHubApi.createCommentToPullRequest(content);
   }
 
   /**
@@ -31210,31 +31207,15 @@ class DefaultReporter extends Reporter {
    * @returns [RspecCaseResult]
    */
   extractRspecResult(rspecResult) {
-    console.log("extractRspecResult START!");
     return rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
       .map(rspecCaseResult => {
-      console.log(rspecCaseResult);
-      return {
-        filepath: rspecCaseResult.file_path,
-        fullDescription: rspecCaseResult.full_description,
-        exceptionMessage: rspecCaseResult.exception.message
-      }
-    });
-  }
-
-  /**
-   * create pull request comment.
-   *
-   * @param content {String} rspec report content
-   */
-  createCommentToPullRequest(content) {
-    this.octokit.rest.issues.createComment({
-      issue_number: this.githubContext.issue.number,
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      body: content
-    });
+        return {
+          filepath: rspecCaseResult.file_path,
+          fullDescription: rspecCaseResult.full_description,
+          exceptionMessage: rspecCaseResult.exception.message
+        }
+      });
   }
 }
 
@@ -31344,12 +31325,11 @@ class DefaultTemplateFactory {
 
 class OnlyPRFilesReporter extends Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class. `OnlyPRFilesReporter` use `OnlyPRFilesTemplate`.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, githubContext) {
-    super(octokit, template, githubContext);
+  constructor(template, gitHubApi) {
+    super(template, gitHubApi);
     this.name = "OnlyPRFilesReporter";
   }
 
@@ -31360,7 +31340,7 @@ class OnlyPRFilesReporter extends Reporter {
    * @param rspecResult {JSON} rspec result (JSON format)
    */
   reportRspecResult(rspecResult) {
-    this.#fetchPullRequestFiles()
+    this.gitHubApi.readPullRequestFiles()
       .then(response => {
         const pullRequestFiles = response.data;
         return pullRequestFiles.map(pullRequestFile => this.#extractFilenameFromPath(pullRequestFile.filename));
@@ -31370,20 +31350,12 @@ class OnlyPRFilesReporter extends Reporter {
       .then(pullRequestRspecFilenames => {
         const rspecCasesResult = this.#extractRspecResult(rspecResult, pullRequestRspecFilenames);
         const content = this.drawPullRequestComment(rspecCasesResult);
-        this.#createCommentToPullRequest(content);
+        this.gitHubApi.createCommentToPullRequest(content);
       })
       .catch(error => {
         console.log(error);
         throw new Error(`OnlyPRFilesReporter.reportRspecResult failed : ${error.message}`);
       });
-  }
-
-  async #fetchPullRequestFiles() {
-    return await this.octokit.rest.pulls.listFiles({
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      pull_number: this.githubContext.issue.number
-    });
   }
 
   /**
@@ -31444,7 +31416,6 @@ class OnlyPRFilesReporter extends Reporter {
    * @returns [RspecCaseResult] rspec cases result in pull requested files
    */
   #extractRspecResult(rspecResult, pullRequestRspecFilenames) {
-    console.log("#extractRspecResult START!");
     return rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
       .filter(failedRspecCaseResult => this.#isPullRequestFiles(failedRspecCaseResult, pullRequestRspecFilenames))
@@ -31467,20 +31438,6 @@ class OnlyPRFilesReporter extends Reporter {
   #isPullRequestFiles(rspecCaseResult, pullRequestedFilenames) {
     const filename = this.#extractFilenameFromPath(rspecCaseResult.file_path);
     return pullRequestedFilenames.includes(filename);
-  }
-
-  /**
-   * create pull request comment.
-   *
-   * @param content {String} rspec report content
-   */
-  #createCommentToPullRequest(content) {
-    this.octokit.rest.issues.createComment({
-      issue_number: this.githubContext.issue.number,
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      body: content
-    });
   }
 }
 
@@ -31510,7 +31467,49 @@ class OnlyPRFilesTemplateFactory {
   }
 }
 
+;// CONCATENATED MODULE: ./modules/GitHubApi.js
+class GitHubApi {
+  /**
+   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
+   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   */
+  constructor(octokit, githubContext) {
+    this.name = "GitHubApi";
+    this.octokit = octokit;
+    this.githubContext = githubContext;
+  }
+
+  /**
+   * Create pull request comment async.<br>
+   * Body is rspec report content.
+   *
+   * @param content {string} rspec report result
+   */
+  createCommentToPullRequest(content) {
+    this.octokit.rest.issues.createComment({
+      issue_number: this.githubContext.issue.number,
+      owner: this.githubContext.repo.owner,
+      repo: this.githubContext.repo.repo,
+      body: content
+    });
+  }
+
+  /**
+   * Read list of pull request files.
+   *
+   * @returns {Promise} read pull request file list promise object
+   */
+  async readPullRequestFiles() {
+    return await this.octokit.rest.pulls.listFiles({
+      owner: this.githubContext.repo.owner,
+      repo: this.githubContext.repo.repo,
+      pull_number: this.githubContext.issue.number
+    });
+  }
+}
+
 ;// CONCATENATED MODULE: ./mode/ReporterFactory.js
+
 
 
 
@@ -31555,7 +31554,9 @@ class ReporterFactory {
     const templateFactory = templates[templateFactoryName];
     const template = templateFactory.createTemplate();
 
-    return reporterFactory.createReporter(octokit, template, githubContext);
+    const gitHubApi = new GitHubApi(octokit, githubContext);
+
+    return reporterFactory.createReporter(template, gitHubApi);
   }
 }
 
@@ -31571,7 +31572,9 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 try {
   const rspecResultFilepath = core.getInput('filepath');
   const reportMode = core.getInput('report-mode');
-  console.log(`report mode is [${reportMode}]`);
+  console.log('== inputs ==');
+  console.log(`mode : ${reportMode}`);
+  console.log(`filepath : ${rspecResultFilepath}`);
 
   const fs = __nccwpck_require__(7147);
   const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));

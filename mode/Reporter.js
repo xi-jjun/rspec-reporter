@@ -1,17 +1,16 @@
 import {NotImplementedException} from "../exceptions/NotImplementedException";
 import {trimEachLines} from "../utils/StringUtils";
+import {GitHubApi} from "../modules/GitHubApi";
 
 export class Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @param gitHubApi {GitHubApi} GitHub API module class for using GitHub api.
    */
-  constructor(octokit, template, githubContext) {
+  constructor(template, gitHubApi) {
     this.name = "Reporter";
-    this.octokit = octokit;
     this.template = template;
-    this.githubContext = githubContext;
+    this.gitHubApi = gitHubApi;
   }
 
   /**
@@ -39,7 +38,6 @@ export class Reporter {
    * @returns {string} return report result content. This content is going to be added pull request comment
    */
   drawPullRequestComment(rspecCasesResult) {
-    console.log("drawPullRequestComment START!!");
     const header = this.template.formatter(this.template.header());
     const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
       const filepath = rspecCaseResult.filepath;

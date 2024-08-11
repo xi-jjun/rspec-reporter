@@ -3,6 +3,7 @@ import {
   OnlyPRFilesReporterFactory,
   OnlyPRFilesTemplateFactory
 } from "./onlyPullRequestFiles/OnlyPRFilesReporterFactory";
+import {GitHubApi} from "../modules/GitHubApi";
 
 const reporters = {
   DefaultReporterFactory,
@@ -45,6 +46,8 @@ export class ReporterFactory {
     const templateFactory = templates[templateFactoryName];
     const template = templateFactory.createTemplate();
 
-    return reporterFactory.createReporter(octokit, template, githubContext);
+    const gitHubApi = new GitHubApi(octokit, githubContext);
+
+    return reporterFactory.createReporter(template, gitHubApi);
   }
 }
