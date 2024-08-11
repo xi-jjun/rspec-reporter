@@ -5,13 +5,13 @@ export class Reporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, githubContext) {
+  constructor(octokit, template, gitHubApi) {
     this.name = "Reporter";
     this.octokit = octokit;
     this.template = template;
-    this.githubContext = githubContext;
+    this.gitHubApi = gitHubApi;
   }
 
   /**

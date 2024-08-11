@@ -4,10 +4,10 @@ export class OnlyPRFilesReporter extends Reporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class. `OnlyPRFilesReporter` use `OnlyPRFilesTemplate`.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, githubContext) {
-    super(octokit, template, githubContext);
+  constructor(octokit, template, gitHubApi) {
+    super(octokit, template, gitHubApi);
     this.name = "OnlyPRFilesReporter";
   }
 
@@ -18,7 +18,7 @@ export class OnlyPRFilesReporter extends Reporter {
    * @param rspecResult {JSON} rspec result (JSON format)
    */
   reportRspecResult(rspecResult) {
-    this.#fetchPullRequestFiles()
+    this.gitHubApi.readPullRequestFiles()
       .then(response => {
         const pullRequestFiles = response.data;
         return pullRequestFiles.map(pullRequestFile => this.#extractFilenameFromPath(pullRequestFile.filename));
@@ -28,20 +28,12 @@ export class OnlyPRFilesReporter extends Reporter {
       .then(pullRequestRspecFilenames => {
         const rspecCasesResult = this.#extractRspecResult(rspecResult, pullRequestRspecFilenames);
         const content = this.drawPullRequestComment(rspecCasesResult);
-        this.#createCommentToPullRequest(content);
+        this.gitHubApi.createCommentToPullRequest(content);
       })
       .catch(error => {
         console.log(error);
         throw new Error(`OnlyPRFilesReporter.reportRspecResult failed : ${error.message}`);
       });
-  }
-
-  async #fetchPullRequestFiles() {
-    return await this.octokit.rest.pulls.listFiles({
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      pull_number: this.githubContext.issue.number
-    });
   }
 
   /**
@@ -125,19 +117,5 @@ export class OnlyPRFilesReporter extends Reporter {
   #isPullRequestFiles(rspecCaseResult, pullRequestedFilenames) {
     const filename = this.#extractFilenameFromPath(rspecCaseResult.file_path);
     return pullRequestedFilenames.includes(filename);
-  }
-
-  /**
-   * create pull request comment.
-   *
-   * @param content {String} rspec report content
-   */
-  #createCommentToPullRequest(content) {
-    this.octokit.rest.issues.createComment({
-      issue_number: this.githubContext.issue.number,
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      body: content
-    });
   }
 }

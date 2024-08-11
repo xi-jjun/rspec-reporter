@@ -4,10 +4,10 @@ export class DefaultReporter extends Reporter {
   /**
    * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, githubContext) {
-    super(octokit, template, githubContext);
+  constructor(octokit, template, gitHubApi) {
+    super(octokit, template, gitHubApi);
     this.name = "DefaultReporter";
   }
 
@@ -19,7 +19,7 @@ export class DefaultReporter extends Reporter {
   reportRspecResult(rspecResult) {
     const rspecCasesResult = this.extractRspecResult(rspecResult);
     const content = this.drawPullRequestComment(rspecCasesResult);
-    this.createCommentToPullRequest(content);
+    this.gitHubApi.createCommentToPullRequest(content);
   }
 
   /**
@@ -40,20 +40,6 @@ export class DefaultReporter extends Reporter {
         fullDescription: rspecCaseResult.full_description,
         exceptionMessage: rspecCaseResult.exception.message
       }
-    });
-  }
-
-  /**
-   * create pull request comment.
-   *
-   * @param content {String} rspec report content
-   */
-  createCommentToPullRequest(content) {
-    this.octokit.rest.issues.createComment({
-      issue_number: this.githubContext.issue.number,
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      body: content
     });
   }
 }
