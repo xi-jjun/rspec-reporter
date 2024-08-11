@@ -31158,7 +31158,6 @@ class Reporter {
    * @returns {string} return report result content. This content is going to be added pull request comment
    */
   drawPullRequestComment(rspecCasesResult) {
-    console.log("drawPullRequestComment START!!");
     const header = this.template.formatter(this.template.header());
     const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
       const filepath = rspecCaseResult.filepath;
@@ -31208,17 +31207,15 @@ class DefaultReporter extends Reporter {
    * @returns [RspecCaseResult]
    */
   extractRspecResult(rspecResult) {
-    console.log("extractRspecResult START!");
     return rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
       .map(rspecCaseResult => {
-      console.log(rspecCaseResult);
-      return {
-        filepath: rspecCaseResult.file_path,
-        fullDescription: rspecCaseResult.full_description,
-        exceptionMessage: rspecCaseResult.exception.message
-      }
-    });
+        return {
+          filepath: rspecCaseResult.file_path,
+          fullDescription: rspecCaseResult.full_description,
+          exceptionMessage: rspecCaseResult.exception.message
+        }
+      });
   }
 }
 
@@ -31419,7 +31416,6 @@ class OnlyPRFilesReporter extends Reporter {
    * @returns [RspecCaseResult] rspec cases result in pull requested files
    */
   #extractRspecResult(rspecResult, pullRequestRspecFilenames) {
-    console.log("#extractRspecResult START!");
     return rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
       .filter(failedRspecCaseResult => this.#isPullRequestFiles(failedRspecCaseResult, pullRequestRspecFilenames))
