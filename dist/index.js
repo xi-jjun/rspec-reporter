@@ -31273,7 +31273,257 @@ class DefaultReporter {
   }
 }
 
+;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesReporter.js
+
+
+class OnlyPRFilesReporter {
+  /**
+   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
+   * @param template {OnlyPRFilesTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
+   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   */
+  constructor(octokit, template, githubContext) {
+    this.name = "OnlyPRFilesReporter";
+    this.octokit = octokit;
+    this.template = template;
+    this.githubContext = githubContext;
+  }
+
+  /**
+   * Parse rspec result file and create pull request comment.<br>
+   * Report rspec result only in pull requested files.
+   *
+   * @param rspecResult {JSON} rspec result (JSON format)
+   */
+  reportRspecResult(rspecResult) {
+    this.#fetchPullRequestFiles()
+      .then(response => {
+        const pullRequestFiles = response.data;
+        return pullRequestFiles.map(pullRequestFile => this.#extractFilenameFromPath(pullRequestFile.filename));
+      })
+      .then(pullRequestFilenames => this.#filterOnlyRubyFiles(pullRequestFilenames))
+      .then(pullRequestRubyFilenames => this.#convertRubyFilenameToRspecFilenames(pullRequestRubyFilenames))
+      .then(pullRequestRspecFilenames => {
+        const rspecCasesResult = this.#extractRspecResult(rspecResult, pullRequestRspecFilenames);
+        const content = this.#drawPullRequestComment(rspecCasesResult);
+        this.#createCommentToPullRequest(content);
+      })
+      .catch(error => {
+        console.log(error);
+        throw new Error(`OnlyPRFilesReporter.reportRspecResult failed : ${error.message}`);
+      });
+  }
+
+  async #fetchPullRequestFiles() {
+    return await this.octokit.rest.pulls.listFiles({
+      owner: this.githubContext.repo.owner,
+      repo: this.githubContext.repo.repo,
+      pull_number: this.githubContext.issue.number
+    });
+  }
+
+  /**
+   * extract filename from filepath.
+   *
+   * @param filepath {string} file path of rspec. <br>ex: `".github/workflows/product_spec.rb"`
+   * @returns {string} filename. ex: `product_spec.rb`
+   */
+  #extractFilenameFromPath(filepath) {
+    try {
+      return filepath.split('/').slice(-1)[0];
+    } catch (error) {
+      console.log(`OnlyPRFilesReporter.#extractFilenameFromPath failed : ${error.message}`);
+      return '';
+    }
+  }
+
+  /**
+   * filter only ruby filenames.
+   *
+   * @param pullRequestFilenames {Array<string>} pull request filenames
+   * @returns {Array<string>} ruby filenames
+   */
+  #filterOnlyRubyFiles(pullRequestFilenames) {
+    return pullRequestFilenames.filter(pullRequestFilename => pullRequestFilename.endsWith('.rb'));
+  }
+
+  /**
+   * make .rb or _spec.rb filename to spec filename.<br>
+   * we need to execute rspec when original file is changed.
+   *
+   * @example
+   * `hello.rb` --> `hello_spec.rb` (changed)
+   * `hello_service_spec.rb` --> `hello_service_spec.rb` (not changed)
+   * `hello.txt` --> `` (empty string)
+   * @param pullRequestFilenames {Array<string>} pull request filenames
+   * @returns {Array<string>} ruby rspec filenames
+   */
+  #convertRubyFilenameToRspecFilenames(pullRequestFilenames) {
+    return pullRequestFilenames.map(pullRequestRubyFilename => {
+      if (pullRequestRubyFilename.endsWith('_spec.rb')) {
+        return pullRequestRubyFilename;
+      } else if (pullRequestRubyFilename.endsWith('.rb')) {
+        const removeExtFilename = pullRequestRubyFilename.substring(0, pullRequestRubyFilename.length - '.rb'.length);
+        return `${removeExtFilename}_spec.rb`;
+      } else {
+        return '';
+      }
+    });
+  }
+
+  /**
+   * iterate rspec each cases and extract `filepath`, `full desc`, `detail message`.<br>
+   * It return extracted rspec failed results by case.
+   *
+   * @param rspecResult {JSON} rspec result (JSON format)
+   * @param pullRequestRspecFilenames {Array<string>} rspec filenames
+   * @returns [RspecCaseResult] rspec cases result in pull requested files
+   */
+  #extractRspecResult(rspecResult, pullRequestRspecFilenames) {
+    console.log("#extractRspecResult START!");
+    return rspecResult.examples
+      .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
+      .filter(failedRspecCaseResult => this.#isPullRequestFiles(failedRspecCaseResult, pullRequestRspecFilenames))
+      .map(failedRspecCaseResult => {
+        return {
+          filepath: failedRspecCaseResult.file_path,
+          fullDescription: failedRspecCaseResult.full_description,
+          exceptionMessage: failedRspecCaseResult.exception.message
+        }
+      });
+  }
+
+  /**
+   * check rspec case is in the pull request files
+   *
+   * @param rspecCaseResult {JSON} rspec case result example
+   * @param pullRequestedFilenames {Array<string>} pull requested filenames
+   * @returns {boolean} return `true` if it is pull requested filename, otherwise return false.
+   */
+  #isPullRequestFiles(rspecCaseResult, pullRequestedFilenames) {
+    const filename = this.#extractFilenameFromPath(rspecCaseResult.file_path);
+    return pullRequestedFilenames.includes(filename);
+  }
+
+  /**
+   * draw report result for comment to pull request.<br>
+   * return comment content string.
+   *
+   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `#extractRspecResult` method.
+   * @returns {string} report content
+   */
+  #drawPullRequestComment(rspecCasesResult) {
+    console.log("#drawPullRequestComment START!!");
+    const header = this.template.formatter(this.template.header());
+    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
+      const filepath = rspecCaseResult.filepath;
+      const fullDescription = rspecCaseResult.fullDescription;
+      const exceptionMessage = rspecCaseResult.exceptionMessage;
+      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
+    }).join("\n");
+    const footer = this.template.formatter(this.template.footer());
+
+    return `
+    ${trimEachLines(header)}
+    ${trimEachLines(rspecResultBody)}
+    ${trimEachLines(footer)}
+    `;
+  }
+
+  /**
+   * create pull request comment.
+   *
+   * @param content {String} rspec report content
+   */
+  #createCommentToPullRequest(content) {
+    this.octokit.rest.issues.createComment({
+      issue_number: this.githubContext.issue.number,
+      owner: this.githubContext.repo.owner,
+      repo: this.githubContext.repo.repo,
+      body: content
+    });
+  }
+}
+
+;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesTemplate.js
+class OnlyPRFilesTemplate {
+  constructor() {
+    this.name = "OnlyPRFilesTemplate";
+    this.formatter = (template, ...args) => {
+      return template.replace(/@{([0-9]+)}/g, function (match, index) {
+        return typeof args[index] === 'undefined' ? match : args[index];
+      });
+    };
+  }
+
+  header() {
+    return `
+    ## Rspec Test Results
+    
+    <table>
+      <tr>
+        <td> rspec filepath </td>
+        <td> full description </td>
+        <td> detail error message </td>
+      </tr>
+    `;
+  }
+
+  body() {
+    return `
+      <tr>
+        <td> @{0} </td>
+        <td> @{1} </td>
+        <td>
+        
+          \`\`\`console
+          
+          @{2}
+          
+          \`\`\`
+        
+        </td>
+      </tr>
+    `;
+  }
+
+  footer() {
+    return `
+    </table>
+    `;
+  }
+
+  templateString() {
+    return `
+    ## Rspec Test Results
+    
+    <table>
+      <tr>
+        <td> rspec filepath </td>
+        <td> full description </td>
+        <td> detail error message </td>
+      </tr>
+      <tr>
+        <td> @{0} </td>
+        <td> @{1} </td>
+        <td>
+        
+          \`\`\`console
+          
+          @{2}
+          
+          \`\`\`
+        
+        </td>
+      </tr>
+    </table>
+    `;
+  }
+}
+
 ;// CONCATENATED MODULE: ./index.js
+
+
 
 
 
@@ -31284,33 +31534,17 @@ const {GITHUB_TOKEN} = process.env;
 const octokit = github.getOctokit(GITHUB_TOKEN);
 
 try {
-  const FILE_PATH = 'filepath';
-  const rspecResultFilepath = core.getInput(FILE_PATH);
+  const rspecResultFilepath = core.getInput('filepath');
   const onlyChangedRspecFile = core.getInput('only-pull-request-files');
 
+  const fs = __nccwpck_require__(7147);
+  const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
+
   if (onlyChangedRspecFile === 'true') {
-    fetchPullRequestFiles(github.context)
-      .then(response => {
-        const pullRequestFiles = response.data;
-        const pullRequestFilenames = pullRequestFiles.map(pullRequestFileInfo => extractFilename(pullRequestFileInfo.filename));
-        return filterPullRequestFilenames(pullRequestFilenames);
-      })
-      .then(filteredPullRequestFilename => createRspecReportComment(rspecResultFilepath, filteredPullRequestFilename))
-      .then(comment => {
-        octokit.rest.issues.createComment({
-          issue_number: github.context.issue.number,
-          owner: github.context.repo.owner,
-          repo: github.context.repo.repo,
-          body: comment
-        });
-      })
-      .catch(error => {
-        console.log(error);
-        throw new Error(`fetchPullRequestFiles failed : ${error.message}`);
-      });
+    const onlyPRFilesTemplate = new OnlyPRFilesTemplate();
+    const onlyPRFilesReporter = new OnlyPRFilesReporter(octokit, onlyPRFilesTemplate, github.context);
+    onlyPRFilesReporter.reportRspecResult(results);
   } else {
-    const fs = __nccwpck_require__(7147);
-    const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
 
     const defaultTemplate = new DefaultTemplate();
     const defaultReporter = new DefaultReporter(octokit, defaultTemplate, github.context);
@@ -31318,73 +31552,6 @@ try {
   }
 } catch (error) {
   core.setFailed(error.message);
-}
-
-// @param githubContext actions/github's context object
-async function fetchPullRequestFiles(githubContext) {
-  return await octokit.rest.pulls.listFiles({
-    owner: githubContext.repo.owner,
-    repo: githubContext.repo.repo,
-    pull_number: githubContext.issue.number
-  });
-}
-
-function filterPullRequestFilenames(pullRequestFilenames) {
-  // 1. *_spec.rb 파일에서 _spec 앞의 이름 추출
-  // 2. *.rb 파일 이름 추출
-  return pullRequestFilenames.filter(changedFilename => changedFilename.endsWith('.rb'))
-    .map(changedRubyFilename => {
-      if (changedRubyFilename.endsWith('_spec.rb')) {
-        return changedRubyFilename;
-      } else {
-        const removeExtFilename = changedRubyFilename.substring(0, changedRubyFilename.length - '.rb'.length);
-        return `${removeExtFilename}_spec.rb`;
-      }
-    });
-}
-
-function createRspecReportComment(rspecResultFilepath, pullRequestRubyFilenames) {
-  const fs = __nccwpck_require__(7147);
-  const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
-
-  let comment = `## RSpec Test Results\n\n`;
-  comment += `<table>
-                <tr>
-                  <td> rspec path </td> 
-                  <td> full description </td>
-                  <td> detail error message </td>
-                </tr>
-            `;
-
-  results.examples.forEach(testCaseResult => {
-    if (pullRequestRubyFilenames.length !== 0) {
-      const testCaseFilename = extractFilename(testCaseResult.file_path);
-      if (!pullRequestRubyFilenames.includes(testCaseFilename)) {
-        // skip if not included
-        console.log(`${testCaseResult.file_path} is skipped, because it is not included this pull request commits.`);
-        return;
-      }
-    }
-
-    if (testCaseResult.status === 'failed') {
-      comment += `<tr>\n`;
-      comment += `  <td> ${testCaseResult.file_path} </td>\n`;
-      comment += `  <td> ${testCaseResult.full_description} </td>\n`;
-      comment += `  <td>\n\n`;
-      comment += `\`\`\`console\n`;
-      comment += ` \n${testCaseResult.exception.message}\n \n`;
-      comment += `\`\`\`\n\n`;
-      comment += `  </td>\n`;
-      comment += `</tr>`;
-    }
-  });
-  comment += `</table>`;
-
-  return comment;
-}
-
-function extractFilename(filepath) {
-  return filepath.split('/').slice(-1)[0];
 }
 
 })();
