@@ -14,7 +14,8 @@ export class OnlyPRFilesReporter {
   }
 
   /**
-   * Parse rspec result file and create pull request comment.
+   * Parse rspec result file and create pull request comment.<br>
+   * Report rspec result only in pull requested files.
    *
    * @param rspecResult {JSON} rspec result (JSON format)
    */
@@ -25,13 +26,16 @@ export class OnlyPRFilesReporter {
         return pullRequestFiles.map(pullRequestFile => this.extractFilenameFromPath(pullRequestFile.filename));
       })
       .then(pullRequestFilenames => this.filterOnlyRubyFiles(pullRequestFilenames))
-      .then(pullRequestRubyFilenames => this.convertRspecFilenames(pullRequestRubyFilenames))
+      .then(pullRequestRubyFilenames => this.convertRubyFilenameToRspecFilenames(pullRequestRubyFilenames))
       .then(pullRequestRspecFilenames => {
         const rspecCasesResult = this.extractRspecResult(rspecResult, pullRequestRspecFilenames);
         const content = this.drawPullRequestComment(rspecCasesResult);
         this.createCommentToPullRequest(content);
       })
-
+      .catch(error => {
+        console.log(error);
+        throw new Error(`OnlyPRFilesReporter.reportRspecResult failed : ${error.message}`);
+      });
   }
 
   async fetchPullRequestFiles() {
@@ -78,7 +82,7 @@ export class OnlyPRFilesReporter {
    * @param pullRequestFilenames {Array<string>} pull request filenames
    * @returns {Array<string>} ruby rspec filenames
    */
-  convertRspecFilenames(pullRequestFilenames) {
+  convertRubyFilenameToRspecFilenames(pullRequestFilenames) {
     return pullRequestFilenames.map(pullRequestRubyFilename => {
       if (pullRequestRubyFilename.endsWith('_spec.rb')) {
         return pullRequestRubyFilename;
@@ -130,7 +134,7 @@ export class OnlyPRFilesReporter {
    * return comment content string.
    *
    * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
-   * @returns String
+   * @returns {string} report content
    */
   drawPullRequestComment(rspecCasesResult) {
     console.log("drawPullRequestComment START!!");
