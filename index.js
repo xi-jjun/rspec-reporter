@@ -9,7 +9,9 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 try {
   const rspecResultFilepath = core.getInput('filepath');
   const reportMode = core.getInput('report-mode');
-  console.log(`report mode is [${reportMode}]`);
+  console.log('== inputs ==');
+  console.log(`mode : ${reportMode}`);
+  console.log(`filepath : ${rspecResultFilepath}`);
 
   const fs = require('fs');
   const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
