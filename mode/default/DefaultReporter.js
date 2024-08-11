@@ -1,4 +1,4 @@
-import {trimEachLines} from "../utils/StringUtils";
+import {trimEachLines} from "../../utils/StringUtils";
 
 export class DefaultReporter {
   /**

@@ -31093,82 +31093,6 @@ var __webpack_exports__ = {};
 // ESM COMPAT FLAG
 __nccwpck_require__.r(__webpack_exports__);
 
-;// CONCATENATED MODULE: ./mode/DefaultTemplate.js
-class DefaultTemplate {
-  constructor() {
-    this.name = "DefaultTemplate";
-    this.formatter = (template, ...args) => {
-      return template.replace(/@{([0-9]+)}/g, function (match, index) {
-        return typeof args[index] === 'undefined' ? match : args[index];
-      });
-    };
-  }
-
-  header() {
-    return `
-    ## Rspec Test Results
-    
-    <table>
-      <tr>
-        <td> rspec filepath </td>
-        <td> full description </td>
-        <td> detail error message </td>
-      </tr>
-    `;
-  }
-
-  body() {
-    return `
-      <tr>
-        <td> @{0} </td>
-        <td> @{1} </td>
-        <td>
-        
-          \`\`\`console
-          
-          @{2}
-          
-          \`\`\`
-        
-        </td>
-      </tr>
-    `;
-  }
-
-  footer() {
-    return `
-    </table>
-    `;
-  }
-
-  templateString() {
-    return `
-    ## Rspec Test Results
-    
-    <table>
-      <tr>
-        <td> rspec filepath </td>
-        <td> full description </td>
-        <td> detail error message </td>
-      </tr>
-      <tr>
-        <td> @{0} </td>
-        <td> @{1} </td>
-        <td>
-        
-          \`\`\`console
-          
-          @{3}
-          
-          \`\`\`
-        
-        </td>
-      </tr>
-    </table>
-    `;
-  }
-}
-
 ;// CONCATENATED MODULE: ./utils/StringUtils.js
 /**
  * trim each lines and join.<br>
@@ -31185,7 +31109,7 @@ const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
     .join(joinChar);
 };
 
-;// CONCATENATED MODULE: ./mode/DefaultReporter.js
+;// CONCATENATED MODULE: ./mode/default/DefaultReporter.js
 
 
 class DefaultReporter {
@@ -31270,6 +31194,98 @@ class DefaultReporter {
       repo: this.githubContext.repo.repo,
       body: content
     });
+  }
+}
+
+;// CONCATENATED MODULE: ./mode/default/DefaultTemplate.js
+class DefaultTemplate {
+  constructor() {
+    this.name = "DefaultTemplate";
+    this.formatter = (template, ...args) => {
+      return template.replace(/@{([0-9]+)}/g, function (match, index) {
+        return typeof args[index] === 'undefined' ? match : args[index];
+      });
+    };
+  }
+
+  header() {
+    return `
+    ## Rspec Test Results
+    
+    <table>
+      <tr>
+        <td> rspec filepath </td>
+        <td> full description </td>
+        <td> detail error message </td>
+      </tr>
+    `;
+  }
+
+  body() {
+    return `
+      <tr>
+        <td> @{0} </td>
+        <td> @{1} </td>
+        <td>
+        
+          \`\`\`console
+          
+          @{2}
+          
+          \`\`\`
+        
+        </td>
+      </tr>
+    `;
+  }
+
+  footer() {
+    return `
+    </table>
+    `;
+  }
+
+  templateString() {
+    return `
+    ## Rspec Test Results
+    
+    <table>
+      <tr>
+        <td> rspec filepath </td>
+        <td> full description </td>
+        <td> detail error message </td>
+      </tr>
+      <tr>
+        <td> @{0} </td>
+        <td> @{1} </td>
+        <td>
+        
+          \`\`\`console
+          
+          @{3}
+          
+          \`\`\`
+        
+        </td>
+      </tr>
+    </table>
+    `;
+  }
+}
+
+;// CONCATENATED MODULE: ./mode/default/DefaultFactory.js
+
+
+
+class DefaultReporterFactory {
+  static createReporter(octokit, template, githubContext) {
+    return new DefaultReporter(octokit, template, githubContext);
+  }
+}
+
+class DefaultTemplateFactory {
+  static createTemplate() {
+    return new DefaultTemplate();
   }
 }
 
@@ -31521,10 +31537,72 @@ class OnlyPRFilesTemplate {
   }
 }
 
+;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesReporterFactory.js
+
+
+
+class OnlyPRFilesReporterFactory {
+  static createReporter(octokit, template, githubContext) {
+    return new OnlyPRFilesReporter(octokit, template, githubContext);
+  }
+}
+
+class OnlyPRFilesTemplateFactory {
+  static createTemplate() {
+    return new OnlyPRFilesTemplate();
+  }
+}
+
+;// CONCATENATED MODULE: ./mode/ReporterFactory.js
+
+
+
+const reporters = {
+  DefaultReporterFactory: DefaultReporterFactory,
+  OnlyPRFilesReporterFactory: OnlyPRFilesReporterFactory
+};
+
+const templates = {
+  DefaultTemplateFactory: DefaultTemplateFactory,
+  OnlyPRFilesTemplateFactory: OnlyPRFilesTemplateFactory
+};
+
+const modes = {
+  default: {
+    reporterFactoryName: "DefaultReporterFactory",
+    templateFactoryName: "DefaultTemplateFactory"
+  },
+  onlyPRFiles: {
+    reporterFactoryName: "OnlyPRFilesReporterFactory",
+    templateFactoryName: "OnlyPRFilesTemplateFactory"
+  }
+};
+
+class ReporterFactory {
+  /**
+   * create reporter by mode
+   *
+   * @param mode {string} report mode
+   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
+   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   * @returns {DefaultReporter|OnlyPRFilesReporter|*} return reporter object by specific mode
+   * @throws {Error} if mode is not matched, then raise error
+   */
+  static createReporter(mode, octokit, githubContext) {
+    const {reporterFactoryName, templateFactoryName} = modes[mode];
+    if (!reporterFactoryName || !templateFactoryName) {
+      throw new Error(`Invalid mode : ${mode}`);
+    }
+
+    const reporterFactory = reporters[reporterFactoryName];
+    const templateFactory = templates[templateFactoryName];
+    const template = templateFactory.createTemplate();
+
+    return reporterFactory.createReporter(octokit, template, githubContext);
+  }
+}
+
 ;// CONCATENATED MODULE: ./index.js
-
-
-
 
 
 const core = __nccwpck_require__(4091);
@@ -31535,21 +31613,14 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 
 try {
   const rspecResultFilepath = core.getInput('filepath');
-  const onlyChangedRspecFile = core.getInput('only-pull-request-files');
+  const reportMode = core.getInput('report-mode');
+  console.log(`report mode is [${reportMode}]`);
 
   const fs = __nccwpck_require__(7147);
-  const results = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
+  const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
 
-  if (onlyChangedRspecFile === 'true') {
-    const onlyPRFilesTemplate = new OnlyPRFilesTemplate();
-    const onlyPRFilesReporter = new OnlyPRFilesReporter(octokit, onlyPRFilesTemplate, github.context);
-    onlyPRFilesReporter.reportRspecResult(results);
-  } else {
-
-    const defaultTemplate = new DefaultTemplate();
-    const defaultReporter = new DefaultReporter(octokit, defaultTemplate, github.context);
-    defaultReporter.reportRspecResult(results);
-  }
+  const reporter = ReporterFactory.createReporter(reportMode, octokit, github.context);
+  reporter.reportRspecResult(rspecResult);
 } catch (error) {
   core.setFailed(error.message);
 }
