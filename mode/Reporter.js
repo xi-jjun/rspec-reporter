@@ -1,15 +1,14 @@
 import {NotImplementedException} from "../exceptions/NotImplementedException";
 import {trimEachLines} from "../utils/StringUtils";
+import {GitHubApi} from "../modules/GitHubApi";
 
 export class Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {Template} Template class.
-   * @param gitHubApi {GitHubApi} GitHub API module class.
+   * @param gitHubApi {GitHubApi} GitHub API module class for using GitHub api.
    */
-  constructor(octokit, template, gitHubApi) {
+  constructor(template, gitHubApi) {
     this.name = "Reporter";
-    this.octokit = octokit;
     this.template = template;
     this.gitHubApi = gitHubApi;
   }

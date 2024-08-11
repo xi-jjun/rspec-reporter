@@ -2,12 +2,11 @@ import {Reporter} from "../Reporter";
 
 export class DefaultReporter extends Reporter {
   /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
    * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
    * @param gitHubApi {GitHubApi} GitHub API module class.
    */
-  constructor(octokit, template, gitHubApi) {
-    super(octokit, template, gitHubApi);
+  constructor(template, gitHubApi) {
+    super(template, gitHubApi);
     this.name = "DefaultReporter";
   }
 

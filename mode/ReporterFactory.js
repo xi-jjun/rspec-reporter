@@ -48,6 +48,6 @@ export class ReporterFactory {
 
     const gitHubApi = new GitHubApi(octokit, githubContext);
 
-    return reporterFactory.createReporter(octokit, template, gitHubApi);
+    return reporterFactory.createReporter(template, gitHubApi);
   }
 }
