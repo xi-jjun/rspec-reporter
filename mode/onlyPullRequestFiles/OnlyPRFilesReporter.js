@@ -20,17 +20,17 @@ export class OnlyPRFilesReporter {
    * @param rspecResult {JSON} rspec result (JSON format)
    */
   reportRspecResult(rspecResult) {
-    this.fetchPullRequestFiles()
+    this.#fetchPullRequestFiles()
       .then(response => {
         const pullRequestFiles = response.data;
-        return pullRequestFiles.map(pullRequestFile => this.extractFilenameFromPath(pullRequestFile.filename));
+        return pullRequestFiles.map(pullRequestFile => this.#extractFilenameFromPath(pullRequestFile.filename));
       })
-      .then(pullRequestFilenames => this.filterOnlyRubyFiles(pullRequestFilenames))
-      .then(pullRequestRubyFilenames => this.convertRubyFilenameToRspecFilenames(pullRequestRubyFilenames))
+      .then(pullRequestFilenames => this.#filterOnlyRubyFiles(pullRequestFilenames))
+      .then(pullRequestRubyFilenames => this.#convertRubyFilenameToRspecFilenames(pullRequestRubyFilenames))
       .then(pullRequestRspecFilenames => {
-        const rspecCasesResult = this.extractRspecResult(rspecResult, pullRequestRspecFilenames);
-        const content = this.drawPullRequestComment(rspecCasesResult);
-        this.createCommentToPullRequest(content);
+        const rspecCasesResult = this.#extractRspecResult(rspecResult, pullRequestRspecFilenames);
+        const content = this.#drawPullRequestComment(rspecCasesResult);
+        this.#createCommentToPullRequest(content);
       })
       .catch(error => {
         console.log(error);
@@ -38,7 +38,7 @@ export class OnlyPRFilesReporter {
       });
   }
 
-  async fetchPullRequestFiles() {
+  async #fetchPullRequestFiles() {
     return await this.octokit.rest.pulls.listFiles({
       owner: this.githubContext.repo.owner,
       repo: this.githubContext.repo.repo,
@@ -52,11 +52,11 @@ export class OnlyPRFilesReporter {
    * @param filepath {string} file path of rspec. <br>ex: `".github/workflows/product_spec.rb"`
    * @returns {string} filename. ex: `product_spec.rb`
    */
-  extractFilenameFromPath(filepath) {
+  #extractFilenameFromPath(filepath) {
     try {
       return filepath.split('/').slice(-1)[0];
     } catch (error) {
-      console.log(`OnlyPRFilesReporter.extractFilenameFromPath failed : ${error.message}`);
+      console.log(`OnlyPRFilesReporter.#extractFilenameFromPath failed : ${error.message}`);
       return '';
     }
   }
@@ -67,7 +67,7 @@ export class OnlyPRFilesReporter {
    * @param pullRequestFilenames {Array<string>} pull request filenames
    * @returns {Array<string>} ruby filenames
    */
-  filterOnlyRubyFiles(pullRequestFilenames) {
+  #filterOnlyRubyFiles(pullRequestFilenames) {
     return pullRequestFilenames.filter(pullRequestFilename => pullRequestFilename.endsWith('.rb'));
   }
 
@@ -82,7 +82,7 @@ export class OnlyPRFilesReporter {
    * @param pullRequestFilenames {Array<string>} pull request filenames
    * @returns {Array<string>} ruby rspec filenames
    */
-  convertRubyFilenameToRspecFilenames(pullRequestFilenames) {
+  #convertRubyFilenameToRspecFilenames(pullRequestFilenames) {
     return pullRequestFilenames.map(pullRequestRubyFilename => {
       if (pullRequestRubyFilename.endsWith('_spec.rb')) {
         return pullRequestRubyFilename;
@@ -103,11 +103,11 @@ export class OnlyPRFilesReporter {
    * @param pullRequestRspecFilenames {Array<string>} rspec filenames
    * @returns [RspecCaseResult] rspec cases result in pull requested files
    */
-  extractRspecResult(rspecResult, pullRequestRspecFilenames) {
-    console.log("extractRspecResult START!");
+  #extractRspecResult(rspecResult, pullRequestRspecFilenames) {
+    console.log("#extractRspecResult START!");
     return rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
-      .filter(failedRspecCaseResult => this.isPullRequestFiles(failedRspecCaseResult, pullRequestRspecFilenames))
+      .filter(failedRspecCaseResult => this.#isPullRequestFiles(failedRspecCaseResult, pullRequestRspecFilenames))
       .map(failedRspecCaseResult => {
         return {
           filepath: failedRspecCaseResult.file_path,
@@ -124,8 +124,8 @@ export class OnlyPRFilesReporter {
    * @param pullRequestedFilenames {Array<string>} pull requested filenames
    * @returns {boolean} return `true` if it is pull requested filename, otherwise return false.
    */
-  isPullRequestFiles(rspecCaseResult, pullRequestedFilenames) {
-    const filename = this.extractFilenameFromPath(rspecCaseResult.file_path);
+  #isPullRequestFiles(rspecCaseResult, pullRequestedFilenames) {
+    const filename = this.#extractFilenameFromPath(rspecCaseResult.file_path);
     return pullRequestedFilenames.includes(filename);
   }
 
@@ -133,11 +133,11 @@ export class OnlyPRFilesReporter {
    * draw report result for comment to pull request.<br>
    * return comment content string.
    *
-   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
+   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `#extractRspecResult` method.
    * @returns {string} report content
    */
-  drawPullRequestComment(rspecCasesResult) {
-    console.log("drawPullRequestComment START!!");
+  #drawPullRequestComment(rspecCasesResult) {
+    console.log("#drawPullRequestComment START!!");
     const header = this.template.formatter(this.template.header());
     const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
       const filepath = rspecCaseResult.filepath;
@@ -159,7 +159,7 @@ export class OnlyPRFilesReporter {
    *
    * @param content {String} rspec report content
    */
-  createCommentToPullRequest(content) {
+  #createCommentToPullRequest(content) {
     this.octokit.rest.issues.createComment({
       issue_number: this.githubContext.issue.number,
       owner: this.githubContext.repo.owner,
