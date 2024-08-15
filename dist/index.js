@@ -31180,7 +31180,7 @@ class Reporter {
 
 class DefaultReporter extends Reporter {
   /**
-   * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
+   * @param template {Template} Template class. `DefaultReporter` use `DefaultTemplate`.
    * @param gitHubApi {GitHubApi} GitHub API module class.
    */
   constructor(template, gitHubApi) {
@@ -31309,8 +31309,15 @@ class DefaultTemplate extends Template {
 
 
 class DefaultReporterFactory {
-  static createReporter(octokit, template, githubContext) {
-    return new DefaultReporter(octokit, template, githubContext);
+  /**
+   * create defaultReporter implementation
+   *
+   * @param template {Template} template object for reporting
+   * @param gitHubApi {GitHubApi} GitHub API module
+   * @returns {DefaultReporter}
+   */
+  static createReporter(template, gitHubApi) {
+    return new DefaultReporter(template, gitHubApi);
   }
 }
 
@@ -31451,19 +31458,75 @@ class OnlyPRFilesTemplate extends Template {
   }
 }
 
-;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesReporterFactory.js
+;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesFactory.js
 
 
 
 class OnlyPRFilesReporterFactory {
-  static createReporter(octokit, template, githubContext) {
-    return new OnlyPRFilesReporter(octokit, template, githubContext);
+  /**
+   * create onlyPRFilesReporter implementation
+   *
+   * @param template {Template} template object for reporting
+   * @param gitHubApi {GitHubApi} GitHub API module
+   * @returns {OnlyPRFilesReporter}
+   */
+  static createReporter(template, gitHubApi) {
+    return new OnlyPRFilesReporter(template, gitHubApi);
   }
 }
 
 class OnlyPRFilesTemplateFactory {
   static createTemplate() {
     return new OnlyPRFilesTemplate();
+  }
+}
+
+;// CONCATENATED MODULE: ./mode/RspecReporterFactory.js
+
+
+
+const reporters = {
+  DefaultReporterFactory: DefaultReporterFactory,
+  OnlyPRFilesReporterFactory: OnlyPRFilesReporterFactory
+};
+
+const templates = {
+  DefaultTemplateFactory: DefaultTemplateFactory,
+  OnlyPRFilesTemplateFactory: OnlyPRFilesTemplateFactory
+};
+
+const modes = {
+  default: {
+    reporterFactoryName: "DefaultReporterFactory",
+    templateFactoryName: "DefaultTemplateFactory"
+  },
+  onlyPRFiles: {
+    reporterFactoryName: "OnlyPRFilesReporterFactory",
+    templateFactoryName: "OnlyPRFilesTemplateFactory"
+  }
+};
+
+class RspecReporterFactory {
+  /**
+   * create reporter by mode
+   *
+   * @param mode {string} report mode
+   * @param gitHubApi {GitHubApi} GitHub API module class. For using GitHub API.
+   * @returns {Reporter} return reporter object by specific mode
+   * @throws {Error} if mode is not matched, then raise error
+   */
+  static create(mode, gitHubApi) {
+    const {reporterFactoryName, templateFactoryName} = modes[mode];
+    if (!reporterFactoryName || !templateFactoryName) {
+      throw new Error(`Invalid mode : ${mode}`);
+    }
+
+    const reporterFactory = reporters[reporterFactoryName];
+    const templateFactory = templates[templateFactoryName];
+
+    const template = templateFactory.createTemplate();
+
+    return reporterFactory.createReporter(template, gitHubApi);
   }
 }
 
@@ -31508,59 +31571,8 @@ class GitHubApi {
   }
 }
 
-;// CONCATENATED MODULE: ./mode/ReporterFactory.js
-
-
-
-
-const reporters = {
-  DefaultReporterFactory: DefaultReporterFactory,
-  OnlyPRFilesReporterFactory: OnlyPRFilesReporterFactory
-};
-
-const templates = {
-  DefaultTemplateFactory: DefaultTemplateFactory,
-  OnlyPRFilesTemplateFactory: OnlyPRFilesTemplateFactory
-};
-
-const modes = {
-  default: {
-    reporterFactoryName: "DefaultReporterFactory",
-    templateFactoryName: "DefaultTemplateFactory"
-  },
-  onlyPRFiles: {
-    reporterFactoryName: "OnlyPRFilesReporterFactory",
-    templateFactoryName: "OnlyPRFilesTemplateFactory"
-  }
-};
-
-class ReporterFactory {
-  /**
-   * create reporter by mode
-   *
-   * @param mode {string} report mode
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
-   * @returns {DefaultReporter|OnlyPRFilesReporter|*} return reporter object by specific mode
-   * @throws {Error} if mode is not matched, then raise error
-   */
-  static createReporter(mode, octokit, githubContext) {
-    const {reporterFactoryName, templateFactoryName} = modes[mode];
-    if (!reporterFactoryName || !templateFactoryName) {
-      throw new Error(`Invalid mode : ${mode}`);
-    }
-
-    const reporterFactory = reporters[reporterFactoryName];
-    const templateFactory = templates[templateFactoryName];
-    const template = templateFactory.createTemplate();
-
-    const gitHubApi = new GitHubApi(octokit, githubContext);
-
-    return reporterFactory.createReporter(template, gitHubApi);
-  }
-}
-
 ;// CONCATENATED MODULE: ./index.js
+
 
 
 const core = __nccwpck_require__(4091);
@@ -31579,7 +31591,8 @@ try {
   const fs = __nccwpck_require__(7147);
   const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
 
-  const reporter = ReporterFactory.createReporter(reportMode, octokit, github.context);
+  const gitHubApi = new GitHubApi(octokit, github.context);
+  const reporter = RspecReporterFactory.create(reportMode, gitHubApi);
   reporter.reportRspecResult(rspecResult);
 } catch (error) {
   core.setFailed(error.message);

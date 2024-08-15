@@ -2,7 +2,7 @@ import {Reporter} from "../Reporter";
 
 export class DefaultReporter extends Reporter {
   /**
-   * @param template {DefaultTemplate} Template class. `DefaultReporter` use `DefaultTemplate`.
+   * @param template {Template} Template class. `DefaultReporter` use `DefaultTemplate`.
    * @param gitHubApi {GitHubApi} GitHub API module class.
    */
   constructor(template, gitHubApi) {

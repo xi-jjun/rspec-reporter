@@ -2,8 +2,7 @@ import {DefaultReporterFactory, DefaultTemplateFactory} from "./default/DefaultF
 import {
   OnlyPRFilesReporterFactory,
   OnlyPRFilesTemplateFactory
-} from "./onlyPullRequestFiles/OnlyPRFilesReporterFactory";
-import {GitHubApi} from "../modules/GitHubApi";
+} from "./onlyPullRequestFiles/OnlyPRFilesFactory";
 
 const reporters = {
   DefaultReporterFactory,
@@ -26,17 +25,16 @@ const modes = {
   }
 };
 
-export class ReporterFactory {
+export class RspecReporterFactory {
   /**
    * create reporter by mode
    *
    * @param mode {string} report mode
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
-   * @returns {DefaultReporter|OnlyPRFilesReporter|*} return reporter object by specific mode
+   * @param gitHubApi {GitHubApi} GitHub API module class. For using GitHub API.
+   * @returns {Reporter} return reporter object by specific mode
    * @throws {Error} if mode is not matched, then raise error
    */
-  static createReporter(mode, octokit, githubContext) {
+  static create(mode, gitHubApi) {
     const {reporterFactoryName, templateFactoryName} = modes[mode];
     if (!reporterFactoryName || !templateFactoryName) {
       throw new Error(`Invalid mode : ${mode}`);
@@ -44,9 +42,8 @@ export class ReporterFactory {
 
     const reporterFactory = reporters[reporterFactoryName];
     const templateFactory = templates[templateFactoryName];
-    const template = templateFactory.createTemplate();
 
-    const gitHubApi = new GitHubApi(octokit, githubContext);
+    const template = templateFactory.createTemplate();
 
     return reporterFactory.createReporter(template, gitHubApi);
   }

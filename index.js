@@ -1,4 +1,5 @@
-import {ReporterFactory} from "./mode/ReporterFactory";
+import {RspecReporterFactory} from "./mode/RspecReporterFactory";
+import {GitHubApi} from "./modules/GitHubApi";
 
 const core = require('@actions/core');
 const github = require('@actions/github');
@@ -16,7 +17,8 @@ try {
   const fs = require('fs');
   const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
 
-  const reporter = ReporterFactory.createReporter(reportMode, octokit, github.context);
+  const gitHubApi = new GitHubApi(octokit, github.context);
+  const reporter = RspecReporterFactory.create(reportMode, gitHubApi);
   reporter.reportRspecResult(rspecResult);
 } catch (error) {
   core.setFailed(error.message);
