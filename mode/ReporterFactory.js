@@ -2,7 +2,7 @@ import {DefaultReporterFactory, DefaultTemplateFactory} from "./default/DefaultF
 import {
   OnlyPRFilesReporterFactory,
   OnlyPRFilesTemplateFactory
-} from "./onlyPullRequestFiles/OnlyPRFilesReporterFactory";
+} from "./onlyPullRequestFiles/OnlyPRFilesFactory";
 import {GitHubApi} from "../modules/GitHubApi";
 
 const reporters = {
