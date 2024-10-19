@@ -1,5 +1,6 @@
-import {RspecReporterFactory} from "./mode/RspecReporterFactory";
 import {GitHubApi} from "./modules/GitHubApi";
+import {Reporter} from "./reporters/Reporter";
+import {DefaultTemplate} from "./mode/default/DefaultTemplate";
 
 const core = require('@actions/core');
 const github = require('@actions/github');
@@ -11,15 +12,14 @@ try {
   const rspecResultFilepath = core.getInput('filepath');
   const reportMode = core.getInput('report-mode');
   console.log('== inputs ==');
-  console.log(`mode : ${reportMode}`);
+  console.log(`mode (Deprecated) : ${reportMode}`);
   console.log(`filepath : ${rspecResultFilepath}`);
+  console.log(`test-framework : ${testFramework}`)
 
-  const fs = require('fs');
-  const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
-
+  const defaultTemplate = new DefaultTemplate();
   const gitHubApi = new GitHubApi(octokit, github.context);
-  const reporter = RspecReporterFactory.create(reportMode, gitHubApi);
-  reporter.reportRspecResult(rspecResult);
+  const reporter = new Reporter(defaultTemplate, gitHubApi);
+  reporter.report(rspecResultFilepath, testFramework);
 } catch (error) {
   core.setFailed(error.message);
 }

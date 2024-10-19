@@ -5450,7 +5450,7 @@ legacyRestEndpointMethods.VERSION = VERSION;
 
 /***/ }),
 
-/***/ 1958:
+/***/ 4255:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5597,7 +5597,7 @@ function isPlainObject(value) {
 }
 
 // pkg/dist-src/fetch-wrapper.js
-var import_request_error = __nccwpck_require__(1958);
+var import_request_error = __nccwpck_require__(4255);
 
 // pkg/dist-src/get-buffer-response.js
 function getBufferResponse(response) {
@@ -31093,11 +31093,98 @@ var __webpack_exports__ = {};
 // ESM COMPAT FLAG
 __nccwpck_require__.r(__webpack_exports__);
 
+;// CONCATENATED MODULE: ./modules/GitHubApi.js
+class GitHubApi {
+  /**
+   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
+   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
+   */
+  constructor(octokit, githubContext) {
+    this.name = "GitHubApi";
+    this.octokit = octokit;
+    this.githubContext = githubContext;
+  }
+
+  /**
+   * Create pull request comment async.<br>
+   * Body is rspec report content.
+   *
+   * @param content {string} rspec report result
+   */
+  createCommentToPullRequest(content) {
+    this.octokit.rest.issues.createComment({
+      issue_number: this.githubContext.issue.number,
+      owner: this.githubContext.repo.owner,
+      repo: this.githubContext.repo.repo,
+      body: content
+    });
+  }
+
+  /**
+   * Read list of pull request files.
+   *
+   * @returns {Promise} read pull request file list promise object
+   */
+  async readPullRequestFiles() {
+    return await this.octokit.rest.pulls.listFiles({
+      owner: this.githubContext.repo.owner,
+      repo: this.githubContext.repo.repo,
+      pull_number: this.githubContext.issue.number
+    });
+  }
+}
+
 ;// CONCATENATED MODULE: ./exceptions/NotImplementedException.js
 class NotImplementedException extends Error {
   constructor(message) {
     super(message);
     this.name = "NotImplementedException";
+  }
+}
+
+;// CONCATENATED MODULE: ./parsers/FrameworkParser.js
+
+
+class FrameworkParser {
+  constructor() {
+    this.defaultEncodingType = 'utf8';
+  }
+
+  /**
+   * A method that parses a test result file.
+   *
+   * @param testResult {string} Output file string for each test framework's test result.
+   * @return {Object} parsing result for reporting test result // TODO : Object --> ReportData
+   */
+  parse(testResult) {
+    throw new NotImplementedException('You should implement this in child class');
+  }
+}
+
+;// CONCATENATED MODULE: ./parsers/RspecParser.js
+
+
+class RspecParser extends FrameworkParser {
+  /**
+   * A method that parses a test result of rspec(JSON file)
+   *
+   * @param filepath {string} rspec result file path
+   * @return {Object} rspec result js object
+   */
+  parse(filepath) {
+    const fs = __nccwpck_require__(7147);
+    const file = fs.readFileSync(filepath, this.defaultEncodingType);
+    const rspecResult = JSON.parse(file);
+
+    return rspecResult.examples
+      .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
+      .map(rspecCaseResult => {
+        return {
+          filepath: rspecCaseResult.file_path,
+          fullDescription: rspecCaseResult.full_description,
+          exceptionMessage: rspecCaseResult.exception.message
+        }
+      });
   }
 }
 
@@ -31117,49 +31204,37 @@ const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
     .join(joinChar);
 };
 
-;// CONCATENATED MODULE: ./mode/Reporter.js
-
+;// CONCATENATED MODULE: ./reporters/Reporter.js
 
 
 
 class Reporter {
   /**
-   * @param template {Template} Template class.
-   * @param gitHubApi {GitHubApi} GitHub API module class for using GitHub api.
+   * @param template {Template} rspec comment design template
+   * @param gitHubApi {GitHubApi} GitHub API module class
    */
   constructor(template, gitHubApi) {
-    this.name = "Reporter";
+    this.parser = {
+      rspec: new RspecParser()
+    };
     this.template = template;
     this.gitHubApi = gitHubApi;
   }
 
-  /**
-   * Parse rspec result file and create pull request comment.
-   *
-   * @param rspecResult {JSON} rspec result (JSON format). It is result of executing rspec.
-   */
-  reportRspecResult(rspecResult) {
-    try {
-      this.notImplementedError();
-    } catch (error) {
-      console.log(error);
+  report(filepath, testFramework) {
+    const parser = this.parser[testFramework.toLowerCase()];
+    if (!parser) {
+      throw new Error(`No parser available for test-framework: ${testFramework}`);
     }
+
+    const testResult = parser.parse(filepath);
+    const content = this.drawPullRequestComment(testResult);
+    this.gitHubApi.createCommentToPullRequest(content);
   }
 
-  notImplementedError() {
-    throw new NotImplementedException('You should implement this in child class');
-  }
-
-  /**
-   * Draw report result for comment to pull request.<br>
-   * Return comment content string. This method is common logic.
-   *
-   * @param rspecCasesResult {Array<RspecCaseResult>} list for rspec each cases result. More detail in `extractRspecResult` method.
-   * @returns {string} return report result content. This content is going to be added pull request comment
-   */
-  drawPullRequestComment(rspecCasesResult) {
+  drawPullRequestComment(rspecTestResult) {
     const header = this.template.formatter(this.template.header());
-    const rspecResultBody = rspecCasesResult.map(rspecCaseResult => {
+    const rspecResultBody = rspecTestResult.map(rspecCaseResult => {
       const filepath = rspecCaseResult.filepath;
       const fullDescription = rspecCaseResult.fullDescription;
       const exceptionMessage = rspecCaseResult.exceptionMessage;
@@ -31172,50 +31247,6 @@ class Reporter {
     ${trimEachLines(rspecResultBody)}
     ${trimEachLines(footer)}
     `;
-  }
-}
-
-;// CONCATENATED MODULE: ./mode/default/DefaultReporter.js
-
-
-class DefaultReporter extends Reporter {
-  /**
-   * @param template {Template} Template class. `DefaultReporter` use `DefaultTemplate`.
-   * @param gitHubApi {GitHubApi} GitHub API module class.
-   */
-  constructor(template, gitHubApi) {
-    super(template, gitHubApi);
-    this.name = "DefaultReporter";
-  }
-
-  /**
-   * Parse rspec result file and create pull request comment.
-   *
-   * @param rspecResult {JSON} rspec result (JSON format)
-   */
-  reportRspecResult(rspecResult) {
-    const rspecCasesResult = this.extractRspecResult(rspecResult);
-    const content = this.drawPullRequestComment(rspecCasesResult);
-    this.gitHubApi.createCommentToPullRequest(content);
-  }
-
-  /**
-   * iterate rspec each cases and extract `filepath`, `full desc`, `detail message`.<br>
-   * It return extracted rspec failed results by case.
-   *
-   * @param rspecResult {JSON} rspec result (JSON format)
-   * @returns [RspecCaseResult]
-   */
-  extractRspecResult(rspecResult) {
-    return rspecResult.examples
-      .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
-      .map(rspecCaseResult => {
-        return {
-          filepath: rspecCaseResult.file_path,
-          fullDescription: rspecCaseResult.full_description,
-          exceptionMessage: rspecCaseResult.exception.message
-        }
-      });
   }
 }
 
@@ -31304,274 +31335,8 @@ class DefaultTemplate extends Template {
   }
 }
 
-;// CONCATENATED MODULE: ./mode/default/DefaultFactory.js
-
-
-
-class DefaultReporterFactory {
-  /**
-   * create defaultReporter implementation
-   *
-   * @param template {Template} template object for reporting
-   * @param gitHubApi {GitHubApi} GitHub API module
-   * @returns {DefaultReporter}
-   */
-  static createReporter(template, gitHubApi) {
-    return new DefaultReporter(template, gitHubApi);
-  }
-}
-
-class DefaultTemplateFactory {
-  static createTemplate() {
-    return new DefaultTemplate();
-  }
-}
-
-;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesReporter.js
-
-
-class OnlyPRFilesReporter extends Reporter {
-  /**
-   * @param template {Template} Template class. `OnlyPRFilesReporter` use `OnlyPRFilesTemplate`.
-   * @param gitHubApi {GitHubApi} GitHub API module class.
-   */
-  constructor(template, gitHubApi) {
-    super(template, gitHubApi);
-    this.name = "OnlyPRFilesReporter";
-  }
-
-  /**
-   * Parse rspec result file and create pull request comment.<br>
-   * Report rspec result only in pull requested files.
-   *
-   * @param rspecResult {JSON} rspec result (JSON format)
-   */
-  reportRspecResult(rspecResult) {
-    this.gitHubApi.readPullRequestFiles()
-      .then(response => {
-        const pullRequestFiles = response.data;
-        return pullRequestFiles.map(pullRequestFile => this.#extractFilenameFromPath(pullRequestFile.filename));
-      })
-      .then(pullRequestFilenames => this.#filterOnlyRubyFiles(pullRequestFilenames))
-      .then(pullRequestRubyFilenames => this.#convertRubyFilenameToRspecFilenames(pullRequestRubyFilenames))
-      .then(pullRequestRspecFilenames => {
-        const rspecCasesResult = this.#extractRspecResult(rspecResult, pullRequestRspecFilenames);
-        const content = this.drawPullRequestComment(rspecCasesResult);
-        this.gitHubApi.createCommentToPullRequest(content);
-      })
-      .catch(error => {
-        console.log(error);
-        throw new Error(`OnlyPRFilesReporter.reportRspecResult failed : ${error.message}`);
-      });
-  }
-
-  /**
-   * extract filename from filepath.
-   *
-   * @param filepath {string} file path of rspec. <br>ex: `".github/workflows/product_spec.rb"`
-   * @returns {string} filename. ex: `product_spec.rb`
-   */
-  #extractFilenameFromPath(filepath) {
-    try {
-      return filepath.split('/').slice(-1)[0];
-    } catch (error) {
-      console.log(`OnlyPRFilesReporter.#extractFilenameFromPath failed : ${error.message}`);
-      return '';
-    }
-  }
-
-  /**
-   * filter only ruby filenames.
-   *
-   * @param pullRequestFilenames {Array<string>} pull request filenames
-   * @returns {Array<string>} ruby filenames
-   */
-  #filterOnlyRubyFiles(pullRequestFilenames) {
-    return pullRequestFilenames.filter(pullRequestFilename => pullRequestFilename.endsWith('.rb'));
-  }
-
-  /**
-   * make .rb or _spec.rb filename to spec filename.<br>
-   * we need to execute rspec when original file is changed.
-   *
-   * @example
-   * `hello.rb` --> `hello_spec.rb` (changed)
-   * `hello_service_spec.rb` --> `hello_service_spec.rb` (not changed)
-   * `hello.txt` --> `` (empty string)
-   * @param pullRequestFilenames {Array<string>} pull request filenames
-   * @returns {Array<string>} ruby rspec filenames
-   */
-  #convertRubyFilenameToRspecFilenames(pullRequestFilenames) {
-    return pullRequestFilenames.map(pullRequestRubyFilename => {
-      if (pullRequestRubyFilename.endsWith('_spec.rb')) {
-        return pullRequestRubyFilename;
-      } else if (pullRequestRubyFilename.endsWith('.rb')) {
-        const removeExtFilename = pullRequestRubyFilename.substring(0, pullRequestRubyFilename.length - '.rb'.length);
-        return `${removeExtFilename}_spec.rb`;
-      } else {
-        return '';
-      }
-    });
-  }
-
-  /**
-   * iterate rspec each cases and extract `filepath`, `full desc`, `detail message`.<br>
-   * It return extracted rspec failed results by case.
-   *
-   * @param rspecResult {JSON} rspec result (JSON format)
-   * @param pullRequestRspecFilenames {Array<string>} rspec filenames
-   * @returns [RspecCaseResult] rspec cases result in pull requested files
-   */
-  #extractRspecResult(rspecResult, pullRequestRspecFilenames) {
-    return rspecResult.examples
-      .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
-      .filter(failedRspecCaseResult => this.#isPullRequestFiles(failedRspecCaseResult, pullRequestRspecFilenames))
-      .map(failedRspecCaseResult => {
-        return {
-          filepath: failedRspecCaseResult.file_path,
-          fullDescription: failedRspecCaseResult.full_description,
-          exceptionMessage: failedRspecCaseResult.exception.message
-        }
-      });
-  }
-
-  /**
-   * check rspec case is in the pull request files
-   *
-   * @param rspecCaseResult {JSON} rspec case result example
-   * @param pullRequestedFilenames {Array<string>} pull requested filenames
-   * @returns {boolean} return `true` if it is pull requested filename, otherwise return false.
-   */
-  #isPullRequestFiles(rspecCaseResult, pullRequestedFilenames) {
-    const filename = this.#extractFilenameFromPath(rspecCaseResult.file_path);
-    return pullRequestedFilenames.includes(filename);
-  }
-}
-
-;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesTemplate.js
-
-
-class OnlyPRFilesTemplate extends Template {
-  constructor() {
-    super();
-    this.name = "OnlyPRFilesTemplate";
-  }
-}
-
-;// CONCATENATED MODULE: ./mode/onlyPullRequestFiles/OnlyPRFilesFactory.js
-
-
-
-class OnlyPRFilesReporterFactory {
-  /**
-   * create onlyPRFilesReporter implementation
-   *
-   * @param template {Template} template object for reporting
-   * @param gitHubApi {GitHubApi} GitHub API module
-   * @returns {OnlyPRFilesReporter}
-   */
-  static createReporter(template, gitHubApi) {
-    return new OnlyPRFilesReporter(template, gitHubApi);
-  }
-}
-
-class OnlyPRFilesTemplateFactory {
-  static createTemplate() {
-    return new OnlyPRFilesTemplate();
-  }
-}
-
-;// CONCATENATED MODULE: ./mode/RspecReporterFactory.js
-
-
-
-const reporters = {
-  DefaultReporterFactory: DefaultReporterFactory,
-  OnlyPRFilesReporterFactory: OnlyPRFilesReporterFactory
-};
-
-const templates = {
-  DefaultTemplateFactory: DefaultTemplateFactory,
-  OnlyPRFilesTemplateFactory: OnlyPRFilesTemplateFactory
-};
-
-const modes = {
-  default: {
-    reporterFactoryName: "DefaultReporterFactory",
-    templateFactoryName: "DefaultTemplateFactory"
-  },
-  onlyPRFiles: {
-    reporterFactoryName: "OnlyPRFilesReporterFactory",
-    templateFactoryName: "OnlyPRFilesTemplateFactory"
-  }
-};
-
-class RspecReporterFactory {
-  /**
-   * create reporter by mode
-   *
-   * @param mode {string} report mode
-   * @param gitHubApi {GitHubApi} GitHub API module class. For using GitHub API.
-   * @returns {Reporter} return reporter object by specific mode
-   * @throws {Error} if mode is not matched, then raise error
-   */
-  static create(mode, gitHubApi) {
-    const {reporterFactoryName, templateFactoryName} = modes[mode];
-    if (!reporterFactoryName || !templateFactoryName) {
-      throw new Error(`Invalid mode : ${mode}`);
-    }
-
-    const reporterFactory = reporters[reporterFactoryName];
-    const templateFactory = templates[templateFactoryName];
-
-    const template = templateFactory.createTemplate();
-
-    return reporterFactory.createReporter(template, gitHubApi);
-  }
-}
-
-;// CONCATENATED MODULE: ./modules/GitHubApi.js
-class GitHubApi {
-  /**
-   * @param octokit {InstanceType<typeof GitHub>} for using GitHub API.
-   * @param githubContext {InstanceType<typeof Context.Context>} github context object. It contains issue number, repo info etc...
-   */
-  constructor(octokit, githubContext) {
-    this.name = "GitHubApi";
-    this.octokit = octokit;
-    this.githubContext = githubContext;
-  }
-
-  /**
-   * Create pull request comment async.<br>
-   * Body is rspec report content.
-   *
-   * @param content {string} rspec report result
-   */
-  createCommentToPullRequest(content) {
-    this.octokit.rest.issues.createComment({
-      issue_number: this.githubContext.issue.number,
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      body: content
-    });
-  }
-
-  /**
-   * Read list of pull request files.
-   *
-   * @returns {Promise} read pull request file list promise object
-   */
-  async readPullRequestFiles() {
-    return await this.octokit.rest.pulls.listFiles({
-      owner: this.githubContext.repo.owner,
-      repo: this.githubContext.repo.repo,
-      pull_number: this.githubContext.issue.number
-    });
-  }
-}
-
 ;// CONCATENATED MODULE: ./index.js
+
 
 
 
@@ -31584,16 +31349,16 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 try {
   const rspecResultFilepath = core.getInput('filepath');
   const reportMode = core.getInput('report-mode');
+  const testFramework = core.getInput('test-framework');
   console.log('== inputs ==');
-  console.log(`mode : ${reportMode}`);
+  console.log(`mode (Deprecated) : ${reportMode}`);
   console.log(`filepath : ${rspecResultFilepath}`);
+  console.log(`test-framework : ${testFramework}`)
 
-  const fs = __nccwpck_require__(7147);
-  const rspecResult = JSON.parse(fs.readFileSync(rspecResultFilepath, 'utf8'));
-
+  const defaultTemplate = new DefaultTemplate();
   const gitHubApi = new GitHubApi(octokit, github.context);
-  const reporter = RspecReporterFactory.create(reportMode, gitHubApi);
-  reporter.reportRspecResult(rspecResult);
+  const reporter = new Reporter(defaultTemplate, gitHubApi);
+  reporter.report(rspecResultFilepath, testFramework);
 } catch (error) {
   core.setFailed(error.message);
 }
