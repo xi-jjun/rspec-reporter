@@ -11,6 +11,7 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 try {
   const rspecResultFilepath = core.getInput('filepath');
   const reportMode = core.getInput('report-mode');
+  const testFramework = core.getInput('test-framework');
   console.log('== inputs ==');
   console.log(`mode (Deprecated) : ${reportMode}`);
   console.log(`filepath : ${rspecResultFilepath}`);

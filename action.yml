@@ -11,6 +11,10 @@ inputs:
     description: 'Rspec report mode. Supported mode is `default`, `onlyPRFiles`'
     required: false
     default: 'default'
+  test-framework:
+    description: 'test framework(rspec)'
+    required: false
+    default: 'rspec'
 runs:
   using: 'node20'
   main: 'dist/index.js'
