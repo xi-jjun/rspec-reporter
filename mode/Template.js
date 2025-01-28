@@ -9,11 +9,11 @@ export class Template {
 
   header() {
     return `
-    ## Rspec Test Results
+    ## Test Results
     
     <table>
       <tr>
-        <td> rspec filepath </td>
+        <td> filepath </td>
         <td> full description </td>
         <td> detail error message </td>
       </tr>
@@ -46,11 +46,11 @@ export class Template {
 
   fullTemplate() {
     return `
-    ## Rspec Test Results
+    ## Test Results
     
     <table>
       <tr>
-        <td> rspec filepath </td>
+        <td> filepath </td>
         <td> full description </td>
         <td> detail error message </td>
       </tr>
