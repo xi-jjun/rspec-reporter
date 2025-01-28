@@ -13,7 +13,7 @@ inputs:
     default: 'default'
   test-framework:
     description: 'test framework(rspec)'
-    required: false
+    required: true
     default: 'rspec'
 runs:
   using: 'node20'
