@@ -31391,10 +31391,8 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 
 try {
   const filepath = core.getInput('filepath');
-  const reportMode = core.getInput('report-mode');
   const testFramework = core.getInput('test-framework');
   console.log('== inputs ==');
-  console.log(`mode (Deprecated) : ${reportMode}`);
   console.log(`filepath : ${filepath}`);
   console.log(`test-framework : ${testFramework}`)
 
