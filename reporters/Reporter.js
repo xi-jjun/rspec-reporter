@@ -1,6 +1,7 @@
 import {RspecParser} from "../parsers/RspecParser";
 import {trimEachLines} from "../utils/StringUtils";
 import {DefaultTemplate} from "../templates/DefaultTemplate";
+import {JUnitParser} from "../parsers/JUnitParser";
 
 export class Reporter {
   /**
@@ -8,7 +9,8 @@ export class Reporter {
    */
   constructor(gitHubApi) {
     this.parser = {
-      rspec: new RspecParser()
+      rspec: new RspecParser(),
+      junit: new JUnitParser(),
     };
     this.templates = {
       default: new DefaultTemplate()
