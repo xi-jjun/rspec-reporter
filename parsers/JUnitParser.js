@@ -33,8 +33,11 @@ export class JUnitParser extends FrameworkParser {
 
 
   /**
-   * @param testCaseResult {JSON}
-   * @return {boolean} return if test case is failure case
+   * Checks if the current test case is a failure case
+   * Returns true if the test case contains a failure element, indicating a failed test
+   * 
+   * @param testCaseResult {JSON} Test case result in JSON format
+   * @return {boolean} return true if test case is a failure case, false otherwise
    */
   #isFailureCase(testCaseResult) {
     const elements = testCaseResult.elements;
