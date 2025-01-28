@@ -31228,60 +31228,16 @@ const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
     .join(joinChar);
 };
 
-;// CONCATENATED MODULE: ./reporters/Reporter.js
-
-
-
-class Reporter {
-  /**
-   * @param template {Template} rspec comment design template
-   * @param gitHubApi {GitHubApi} GitHub API module class
-   */
-  constructor(template, gitHubApi) {
-    this.parser = {
-      rspec: new RspecParser()
-    };
-    this.template = template;
-    this.gitHubApi = gitHubApi;
-  }
-
-  report(filepath, testFramework) {
-    const parser = this.parser[testFramework.toLowerCase()];
-    if (!parser) {
-      throw new Error(`No parser available for test-framework: ${testFramework}`);
-    }
-
-    const testResult = parser.parse(filepath);
-    const content = this.drawPullRequestComment(testResult);
-    this.gitHubApi.createCommentToPullRequest(content);
-  }
-
-  /**
-   * @param testResult {TestResult}
-   * @return {string}
-   */
-  drawPullRequestComment(testResult) {
-    const header = this.template.formatter(this.template.header());
-    const testResultBody = testResult.testCaseResults
-      .map(testCaseResult => {
-        const filepath = testCaseResult.filepath;
-        const fullDescription = testCaseResult.fullDescription;
-        const failMessage = testCaseResult.failMessage;
-        return this.template.formatter(this.template.body(), filepath, fullDescription, failMessage);
-      }).join("\n");
-    const footer = this.template.formatter(this.template.footer());
-
-    return `
-    ${trimEachLines(header)}
-    ${trimEachLines(testResultBody)}
-    ${trimEachLines(footer)}
-    `;
-  }
-}
-
 ;// CONCATENATED MODULE: ./mode/Template.js
 class Template {
   constructor() {
+    this.testFrameworks = {
+      rspec: {
+        color: 'red',
+        name: 'Rspec'
+      }
+    };
+    this.testFramework = null;
     this.formatter = (template, ...args) => {
       return template.replace(/@{([0-9]+)}/g, function (match, index) {
         return typeof args[index] === 'undefined' ? match : args[index];
@@ -31291,11 +31247,11 @@ class Template {
 
   header() {
     return `
-    ## Rspec Test Results
+    ## \$\${\\color{${this.testFramework.color}}${this.testFramework.name}}\$\$ Test results
     
     <table>
       <tr>
-        <td> rspec filepath </td>
+        <td> filepath </td>
         <td> full description </td>
         <td> detail error message </td>
       </tr>
@@ -31328,11 +31284,11 @@ class Template {
 
   fullTemplate() {
     return `
-    ## Rspec Test Results
+    ## ${this.testFramework} Test Results
     
     <table>
       <tr>
-        <td> rspec filepath </td>
+        <td> filepath </td>
         <td> full description </td>
         <td> detail error message </td>
       </tr>
@@ -31364,8 +31320,66 @@ class DefaultTemplate extends Template {
   }
 }
 
-;// CONCATENATED MODULE: ./index.js
+;// CONCATENATED MODULE: ./reporters/Reporter.js
 
+
+
+
+class Reporter {
+  /**
+   * @param gitHubApi {GitHubApi} GitHub API module class
+   */
+  constructor(gitHubApi) {
+    this.parser = {
+      rspec: new RspecParser()
+    };
+    this.templates = {
+      default: new DefaultTemplate()
+    }
+    this.gitHubApi = gitHubApi;
+  }
+
+  report(filepath, testFramework, template = 'default') {
+    const parser = this.parser[testFramework.toLowerCase()];
+    if (!parser) {
+      throw new Error(`No parser available for test-framework: ${testFramework}`);
+    }
+    const reportTemplate = this.templates[template];
+    if (!reportTemplate) {
+      throw new Error(`No template available: ${template}`);
+    }
+    reportTemplate.testFramework = reportTemplate.testFrameworks[testFramework.toLowerCase()];
+
+    const testResult = parser.parse(filepath);
+    const content = this.drawPullRequestComment(testResult, reportTemplate);
+    this.gitHubApi.createCommentToPullRequest(content);
+  }
+
+  /**
+   * @param testResult {TestResult}
+   * @param reportTemplate {Template}
+   * @return {string}
+   */
+  drawPullRequestComment(testResult, reportTemplate) {
+    const header = reportTemplate.formatter(reportTemplate.header());
+    const testResultBody = testResult.testCaseResults
+      .map(testCaseResult => {
+        const filepath = testCaseResult.filepath;
+        const fullDescription = testCaseResult.fullDescription;
+        const failMessage = testCaseResult.failMessage;
+        return reportTemplate.formatter(reportTemplate.body(), filepath, fullDescription, failMessage);
+      }).join("\n");
+    const footer = reportTemplate.formatter(reportTemplate.footer());
+
+    return `
+    ${trimEachLines(header)}
+    ${trimEachLines(testResultBody)}
+    ${trimEachLines(footer)}
+    `;
+  }
+}
+
+;// CONCATENATED MODULE: ./index.js
 
 
 
@@ -31376,18 +31390,17 @@ const {GITHUB_TOKEN} = process.env;
 const octokit = github.getOctokit(GITHUB_TOKEN);
 
 try {
-  const rspecResultFilepath = core.getInput('filepath');
+  const filepath = core.getInput('filepath');
   const reportMode = core.getInput('report-mode');
   const testFramework = core.getInput('test-framework');
   console.log('== inputs ==');
   console.log(`mode (Deprecated) : ${reportMode}`);
-  console.log(`filepath : ${rspecResultFilepath}`);
+  console.log(`filepath : ${filepath}`);
   console.log(`test-framework : ${testFramework}`)
 
-  const defaultTemplate = new DefaultTemplate();
   const gitHubApi = new GitHubApi(octokit, github.context);
-  const reporter = new Reporter(defaultTemplate, gitHubApi);
-  reporter.report(rspecResultFilepath, testFramework);
+  const reporter = new Reporter(gitHubApi);
+  reporter.report(filepath, testFramework);
 } catch (error) {
   core.setFailed(error.message);
 }
