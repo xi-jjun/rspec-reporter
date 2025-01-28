@@ -25,6 +25,7 @@ export class Reporter {
     if (!reportTemplate) {
       throw new Error(`No template available: ${template}`);
     }
+    reportTemplate.testFramework = reportTemplate.testFrameworks[testFramework.toLowerCase()];
 
     const testResult = parser.parse(filepath);
     const content = this.drawPullRequestComment(testResult, reportTemplate);
