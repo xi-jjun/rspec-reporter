@@ -33791,7 +33791,8 @@ class JUnitParser extends FrameworkParser {
           .filter(testCaseResult => testCaseResult.name === 'testcase' && this.#isFailureCase(testCaseResult))
           .map(testCaseResult => {
             const testCaseName = testCaseResult.attributes.name;
-            const failMessage = testCaseResult.elements[0].elements[0].text;
+            // const failMessage = testCaseResult.elements[0].elements[0].text;
+            const failMessage = testCaseResult.elements[0].attributes.message;
             return new TestCaseResult(packageName, testCaseName, failMessage);
           });
       });
