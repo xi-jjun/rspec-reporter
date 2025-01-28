@@ -13,6 +13,11 @@ You need to generate github token for using this actions. ([see GitHub Docs](htt
 - `REQUIRED`
 - Your rspec result file must be in JSON format. Please generate the rspec result in JSON format.
 
+### `test-framework`
+- The framework used to execute tests. Please specify the test framework used.
+- `REQUIRED`
+- Currently, only `rspec`, `junit` are supported.
+
 ## Outputs
 There is no output here.<br>
 
