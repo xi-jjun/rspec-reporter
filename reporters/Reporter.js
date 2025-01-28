@@ -25,19 +25,24 @@ export class Reporter {
     this.gitHubApi.createCommentToPullRequest(content);
   }
 
-  drawPullRequestComment(rspecTestResult) {
+  /**
+   * @param testResult {TestResult}
+   * @return {string}
+   */
+  drawPullRequestComment(testResult) {
     const header = this.template.formatter(this.template.header());
-    const rspecResultBody = rspecTestResult.map(rspecCaseResult => {
-      const filepath = rspecCaseResult.filepath;
-      const fullDescription = rspecCaseResult.fullDescription;
-      const exceptionMessage = rspecCaseResult.exceptionMessage;
-      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    }).join("\n");
+    const testResultBody = testResult.testCaseResults
+      .map(testCaseResult => {
+        const filepath = testCaseResult.filepath;
+        const fullDescription = testCaseResult.fullDescription;
+        const failMessage = testCaseResult.failMessage;
+        return this.template.formatter(this.template.body(), filepath, fullDescription, failMessage);
+      }).join("\n");
     const footer = this.template.formatter(this.template.footer());
 
     return `
     ${trimEachLines(header)}
-    ${trimEachLines(rspecResultBody)}
+    ${trimEachLines(testResultBody)}
     ${trimEachLines(footer)}
     `;
   }

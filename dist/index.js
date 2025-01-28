@@ -5450,7 +5450,7 @@ legacyRestEndpointMethods.VERSION = VERSION;
 
 /***/ }),
 
-/***/ 4255:
+/***/ 1958:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5597,7 +5597,7 @@ function isPlainObject(value) {
 }
 
 // pkg/dist-src/fetch-wrapper.js
-var import_request_error = __nccwpck_require__(4255);
+var import_request_error = __nccwpck_require__(1958);
 
 // pkg/dist-src/get-buffer-response.js
 function getBufferResponse(response) {
@@ -31154,14 +31154,35 @@ class FrameworkParser {
    * A method that parses a test result file.
    *
    * @param testResult {string} Output file string for each test framework's test result.
-   * @return {Object} parsing result for reporting test result // TODO : Object --> ReportData
+   * @return {TestResult} parsing result for reporting test result
    */
   parse(testResult) {
     throw new NotImplementedException('You should implement this in child class');
   }
 }
 
+;// CONCATENATED MODULE: ./models/TestResult.js
+class TestResult {
+  /**
+   * @param testCaseResults {Array<TestCaseResult>} result list of test cases
+   */
+  constructor(testCaseResults) {
+    this.testCaseResults = testCaseResults;
+  }
+}
+
+;// CONCATENATED MODULE: ./models/TestCaseResult.js
+class TestCaseResult {
+  constructor(filepath, fullDescription, failMessage) {
+    this.filepath = filepath;
+    this.fullDescription = fullDescription;
+    this.failMessage = failMessage;
+  }
+}
+
 ;// CONCATENATED MODULE: ./parsers/RspecParser.js
+
+
 
 
 class RspecParser extends FrameworkParser {
@@ -31169,22 +31190,25 @@ class RspecParser extends FrameworkParser {
    * A method that parses a test result of rspec(JSON file)
    *
    * @param filepath {string} rspec result file path
-   * @return {Object} rspec result js object
+   * @return {TestResult} rspec result js object
    */
   parse(filepath) {
     const fs = __nccwpck_require__(7147);
     const file = fs.readFileSync(filepath, this.defaultEncodingType);
     const rspecResult = JSON.parse(file);
 
-    return rspecResult.examples
+    const testCaseResults = rspecResult.examples
       .filter(rspecCaseResult => rspecCaseResult.status === 'failed')
       .map(rspecCaseResult => {
-        return {
-          filepath: rspecCaseResult.file_path,
-          fullDescription: rspecCaseResult.full_description,
-          exceptionMessage: rspecCaseResult.exception.message
-        }
+        // TODO : rspecCaseResult.run_time (spend time)
+        return new TestCaseResult(
+          rspecCaseResult.file_path,
+          rspecCaseResult.full_description,
+          rspecCaseResult.exception.message
+        );
       });
+
+    return new TestResult(testCaseResults);
   }
 }
 
@@ -31232,19 +31256,24 @@ class Reporter {
     this.gitHubApi.createCommentToPullRequest(content);
   }
 
-  drawPullRequestComment(rspecTestResult) {
+  /**
+   * @param testResult {TestResult}
+   * @return {string}
+   */
+  drawPullRequestComment(testResult) {
     const header = this.template.formatter(this.template.header());
-    const rspecResultBody = rspecTestResult.map(rspecCaseResult => {
-      const filepath = rspecCaseResult.filepath;
-      const fullDescription = rspecCaseResult.fullDescription;
-      const exceptionMessage = rspecCaseResult.exceptionMessage;
-      return this.template.formatter(this.template.body(), filepath, fullDescription, exceptionMessage);
-    }).join("\n");
+    const testResultBody = testResult.testCaseResults
+      .map(testCaseResult => {
+        const filepath = testCaseResult.filepath;
+        const fullDescription = testCaseResult.fullDescription;
+        const failMessage = testCaseResult.failMessage;
+        return this.template.formatter(this.template.body(), filepath, fullDescription, failMessage);
+      }).join("\n");
     const footer = this.template.formatter(this.template.footer());
 
     return `
     ${trimEachLines(header)}
-    ${trimEachLines(rspecResultBody)}
+    ${trimEachLines(testResultBody)}
     ${trimEachLines(footer)}
     `;
   }
