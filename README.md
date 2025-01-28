@@ -54,8 +54,29 @@ jobs:
         uses: xi-jjun/rspec-reporter@v1.1.0
         with:
           filepath: 'tmp/rspec_result.json'
-          report-mode: 'default' # optional. default value is 'default'.
+          test-framework: 'rspec'
         env:
           # Set the GitHub token that you generated earlier.
           GITHUB_TOKEN: ${{ secrets.CREATE_ISSUE_GITHUB_TOKEN }} 
+```
+
+For JUnit test framework
+```yaml
+name: "Run JUnit test"
+  ...
+    # Github actions permissions (PR comment에 테스트 결과 리포팅을 위해 필수)
+    permissions:
+      issues: write
+      pull-requests: write
+      
+      ...
+
+      - name: test marketplace
+        if: failure()
+        uses: 'xi-jjun/rspec-reporter@feature/#21_add_junit_testframework'
+        with:
+          filepath: './spring-junit/build/test-results/cases' # test result file dir
+          test-framework: 'junit'
+        env:
+          GITHUB_TOKEN: ${{ secrets.CREATE_ISSUE_GITHUB_TOKEN }}
 ```
