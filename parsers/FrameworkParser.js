@@ -8,10 +8,10 @@ export class FrameworkParser {
   /**
    * A method that parses a test result file.
    *
-   * @param testResult {string} Output file string for each test framework's test result.
+   * @param filepath {string} Path to the test result file generated from user's test execution
    * @return {TestResult} parsing result for reporting test result
    */
-  parse(testResult) {
+  parse(filepath) {
     throw new NotImplementedException('You should implement this in child class');
   }
 }
