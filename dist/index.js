@@ -31228,7 +31228,7 @@ const trimEachLines = (str, splitChar = "\n", joinChar = "\n") => {
     .join(joinChar);
 };
 
-;// CONCATENATED MODULE: ./mode/Template.js
+;// CONCATENATED MODULE: ./templates/Template.js
 class Template {
   constructor() {
     this.testFrameworks = {
@@ -31310,7 +31310,7 @@ class Template {
   }
 }
 
-;// CONCATENATED MODULE: ./mode/default/DefaultTemplate.js
+;// CONCATENATED MODULE: ./templates/DefaultTemplate.js
 
 
 class DefaultTemplate extends Template {
