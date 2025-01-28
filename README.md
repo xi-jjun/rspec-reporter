@@ -51,7 +51,7 @@ jobs:
 
       - name: Add rspec failure result on Pull Request comment
         if: failure() # Generate a report in pull request comment when rspec is failed.
-        uses: xi-jjun/rspec-reporter@v1.1.0
+        uses: xi-jjun/rspec-reporter@v2.0.0
         with:
           filepath: 'tmp/rspec_result.json'
           test-framework: 'rspec'
@@ -73,7 +73,7 @@ name: "Run JUnit test"
 
       - name: test marketplace
         if: failure()
-        uses: 'xi-jjun/rspec-reporter@feature/#21_add_junit_testframework'
+        uses: xi-jjun/rspec-reporter@v2.0.0
         with:
           filepath: './spring-junit/build/test-results/cases' # test result file dir
           test-framework: 'junit'
