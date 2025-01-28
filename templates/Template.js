@@ -4,7 +4,11 @@ export class Template {
       rspec: {
         color: 'red',
         name: 'Rspec'
-      }
+      },
+      junit: {
+        color: 'green',
+        name: 'JUnit'
+      },
     };
     this.testFramework = null;
     this.formatter = (template, ...args) => {
