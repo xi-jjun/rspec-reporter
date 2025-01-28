@@ -1,6 +1,6 @@
 import {RspecParser} from "../parsers/RspecParser";
 import {trimEachLines} from "../utils/StringUtils";
-import {DefaultTemplate} from "../mode/default/DefaultTemplate";
+import {DefaultTemplate} from "../templates/DefaultTemplate";
 
 export class Reporter {
   /**
