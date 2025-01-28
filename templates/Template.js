@@ -1,5 +1,16 @@
 export class Template {
   constructor() {
+    this.testFrameworks = {
+      rspec: {
+        color: 'red',
+        name: 'Rspec'
+      },
+      junit: {
+        color: 'green',
+        name: 'JUnit'
+      },
+    };
+    this.testFramework = null;
     this.formatter = (template, ...args) => {
       return template.replace(/@{([0-9]+)}/g, function (match, index) {
         return typeof args[index] === 'undefined' ? match : args[index];
@@ -9,11 +20,11 @@ export class Template {
 
   header() {
     return `
-    ## Rspec Test Results
+    ## \$\${\\color{${this.testFramework.color}}${this.testFramework.name}}\$\$ Test results
     
     <table>
       <tr>
-        <td> rspec filepath </td>
+        <td> filepath </td>
         <td> full description </td>
         <td> detail error message </td>
       </tr>
@@ -46,11 +57,11 @@ export class Template {
 
   fullTemplate() {
     return `
-    ## Rspec Test Results
+    ## ${this.testFramework} Test Results
     
     <table>
       <tr>
-        <td> rspec filepath </td>
+        <td> filepath </td>
         <td> full description </td>
         <td> detail error message </td>
       </tr>

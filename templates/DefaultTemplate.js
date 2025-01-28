@@ -1,4 +1,4 @@
-import {Template} from "../Template";
+import {Template} from "./Template";
 
 export class DefaultTemplate extends Template {
   constructor() {
